@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>InterviewAce Admin</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Replace YOUR_PUBLISHABLE_KEY with your Clerk publishable key -->
+<script>window.__CLERK_PUBLISHABLE_KEY__ = window.location.search.includes('key=')
+  ? decodeURIComponent(window.location.search.split('key=')[1].split('&')[0])
+  : 'pk_test_replace_with_your_key';
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -13,6 +19,76 @@
       color: #e2e8f0;
       min-height: 100vh;
     }
+
+    .login-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .login-box {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 40px;
+      text-align: center;
+      max-width: 400px;
+      width: 100%;
+    }
+
+    .login-logo {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      font-weight: 700;
+      color: white;
+      margin: 0 auto 24px;
+    }
+
+    .login-title { font-size: 24px; font-weight: 700; color: #f8fafc; margin-bottom: 8px; }
+    .login-sub { font-size: 14px; color: #64748b; margin-bottom: 32px; }
+
+    .clerk-button {
+      width: 100%;
+      padding: 14px 24px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border: none;
+      border-radius: 10px;
+      color: white;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      margin-bottom: 16px;
+    }
+    .clerk-button:hover { opacity: 0.9; }
+
+    .clerk-signin { display: none; }
+
+    .error-box {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid #ef4444;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 20px;
+      color: #ef4444;
+      font-size: 14px;
+    }
+
+    .access-denied {
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    .access-denied h2 { color: #ef4444; margin-bottom: 12px; }
+    .access-denied p { color: #64748b; margin-bottom: 24px; }
 
     .header {
       background: #1e293b;
@@ -43,6 +119,26 @@
 
     .logo-text { font-size: 18px; font-weight: 600; color: #f8fafc; }
     .logo-sub { font-size: 12px; color: #64748b; }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .user-email { font-size: 13px; color: #94a3b8; }
+
+    .logout-btn {
+      padding: 8px 16px;
+      background: #334155;
+      border: none;
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .logout-btn:hover { background: #475569; }
 
     .nav {
       display: flex;
@@ -168,6 +264,8 @@
     }
     .refresh-btn:hover { background: #475569; color: white; }
 
+    .hidden { display: none !important; }
+
     @media (max-width: 768px) {
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
       table { font-size: 12px; }
@@ -176,141 +274,286 @@
   </style>
 </head>
 <body>
-  <header class="header">
-    <div class="logo">
-      <div class="logo-icon">IA</div>
-      <div>
-        <div class="logo-text">InterviewAce Admin</div>
-        <div class="logo-sub">Management Dashboard</div>
-      </div>
+  <!-- Login Screen -->
+  <div id="loginScreen" class="login-container">
+    <div class="login-box">
+      <div class="login-logo">IA</div>
+      <h1 class="login-title">Admin Access</h1>
+      <p class="login-sub">Sign in to manage InterviewAce</p>
+
+      <div id="loginError" class="error-box hidden"></div>
+
+      <button id="signInBtn" class="clerk-button">
+        Sign In with Google
+      </button>
+
+      <div id="clerkSignIn" class="clerk-signin"></div>
     </div>
-    <nav class="nav">
-      <button class="nav-btn active" data-section="overview">Overview</button>
-      <button class="nav-btn" data-section="users">Users</button>
-      <button class="nav-btn" data-section="payouts">Payouts</button>
-      <button class="nav-btn" data-section="sessions">Sessions</button>
-    </nav>
-  </header>
+  </div>
 
-  <main class="container">
-    <!-- Overview Stats -->
-    <section class="stats-grid" id="statsGrid">
-      <div class="stat-card">
-        <div class="stat-label">Total Users</div>
-        <div class="stat-value" id="statUsers">-</div>
-        <div class="stat-change" id="statUsersChange">Loading...</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Active Subscribers</div>
-        <div class="stat-value" id="statSubs">-</div>
-        <div class="stat-change" id="statSubsChange">Loading...</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Pending Payouts</div>
-        <div class="stat-value" id="statPayouts">-</div>
-        <div class="stat-change" id="statPayoutsChange">Loading...</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Revenue (Month)</div>
-        <div class="stat-value" id="statRevenue">-</div>
-        <div class="stat-change" id="statRevenueChange">Loading...</div>
-      </div>
-    </section>
+  <!-- Access Denied Screen -->
+  <div id="accessDenied" class="access-denied hidden">
+    <h2>Access Denied</h2>
+    <p>Your account doesn't have admin privileges.</p>
+    <p style="font-size: 13px; color: #64748b;">Contact support if you need admin access.</p>
+    <button onclick="Clerk.signOut()" class="logout-btn" style="margin-top: 16px;">Sign Out</button>
+  </div>
 
-    <!-- Users Section -->
-    <section class="section" id="usersSection">
-      <div class="section-header">
-        <span class="section-title">Users</span>
-        <div class="flex gap-2">
-          <button class="refresh-btn" onclick="loadUsers()">Refresh</button>
-          <span class="section-count" id="userCount">0 users</span>
+  <!-- Admin Dashboard -->
+  <div id="adminDashboard" class="hidden">
+    <header class="header">
+      <div class="logo">
+        <div class="logo-icon">IA</div>
+        <div>
+          <div class="logo-text">InterviewAce Admin</div>
+          <div class="logo-sub">Management Dashboard</div>
         </div>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>User</th>
-            <th>Email</th>
-            <th>Plan</th>
-            <th>Referral Code</th>
-            <th>Earnings</th>
-            <th>Joined</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="usersTable">
-          <tr><td colspan="7" class="loading">Loading users...</td></tr>
-        </tbody>
-      </table>
-    </section>
-
-    <!-- Payouts Section -->
-    <section class="section" id="payoutsSection" style="display: none;">
-      <div class="section-header">
-        <span class="section-title">Pending Payouts</span>
-        <div class="flex gap-2">
-          <button class="refresh-btn" onclick="loadPayouts()">Refresh</button>
-          <span class="section-count" id="payoutCount">0 requests</span>
-        </div>
+      <div class="user-info">
+        <span id="adminEmail" class="user-email"></span>
+        <button id="logoutBtn" class="logout-btn">Sign Out</button>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Referrer</th>
-            <th>Referee</th>
-            <th>Reward</th>
-            <th>Status</th>
-            <th>Date</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="payoutsTable">
-          <tr><td colspan="6" class="loading">Loading payouts...</td></tr>
-        </tbody>
-      </table>
-    </section>
+    </header>
 
-    <!-- Sessions Section -->
-    <section class="section" id="sessionsSection" style="display: none;">
-      <div class="section-header">
-        <span class="section-title">Recent Sessions</span>
-        <div class="flex gap-2">
-          <button class="refresh-btn" onclick="loadSessions()">Refresh</button>
-          <span class="section-count" id="sessionCount">0 sessions</span>
+    <main class="container">
+      <!-- Navigation -->
+      <nav class="nav" style="margin-bottom: 24px;">
+        <button class="nav-btn active" data-section="overview">Overview</button>
+        <button class="nav-btn" data-section="users">Users</button>
+        <button class="nav-btn" data-section="payouts">Payouts</button>
+        <button class="nav-btn" data-section="sessions">Sessions</button>
+      </nav>
+
+      <!-- Overview Stats -->
+      <section class="stats-grid" id="statsGrid">
+        <div class="stat-card">
+          <div class="stat-label">Total Users</div>
+          <div class="stat-value" id="statUsers">-</div>
+          <div class="stat-change" id="statUsersChange">Loading...</div>
         </div>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>User</th>
-            <th>Platform</th>
-            <th>Duration</th>
-            <th>Questions</th>
-            <th>Date</th>
-          </tr>
-        </thead>
-        <tbody id="sessionsTable">
-          <tr><td colspan="5" class="loading">Loading sessions...</td></tr>
-        </tbody>
-      </table>
-    </section>
-  </main>
+        <div class="stat-card">
+          <div class="stat-label">Active Subscribers</div>
+          <div class="stat-value" id="statSubs">-</div>
+          <div class="stat-change" id="statSubsChange">Loading...</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pending Payouts</div>
+          <div class="stat-value" id="statPayouts">-</div>
+          <div class="stat-change" id="statPayoutsChange">Loading...</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Revenue (Month)</div>
+          <div class="stat-value" id="statRevenue">-</div>
+          <div class="stat-change" id="statRevenueChange">Loading...</div>
+        </div>
+      </section>
+
+      <!-- Users Section -->
+      <section class="section" id="usersSection">
+        <div class="section-header">
+          <span class="section-title">Users</span>
+          <div class="flex gap-2">
+            <button class="refresh-btn" onclick="loadUsers()">Refresh</button>
+            <span class="section-count" id="userCount">0 users</span>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Email</th>
+              <th>Plan</th>
+              <th>Referral Code</th>
+              <th>Earnings</th>
+              <th>Joined</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="usersTable">
+            <tr><td colspan="7" class="loading">Loading users...</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Payouts Section -->
+      <section class="section" id="payoutsSection" style="display: none;">
+        <div class="section-header">
+          <span class="section-title">Pending Payouts</span>
+          <div class="flex gap-2">
+            <button class="refresh-btn" onclick="loadPayouts()">Refresh</button>
+            <span class="section-count" id="payoutCount">0 requests</span>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Referrer</th>
+              <th>Referee</th>
+              <th>Reward</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="payoutsTable">
+            <tr><td colspan="6" class="loading">Loading payouts...</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Sessions Section -->
+      <section class="section" id="sessionsSection" style="display: none;">
+        <div class="section-header">
+          <span class="section-title">Recent Sessions</span>
+          <div class="flex gap-2">
+            <button class="refresh-btn" onclick="loadSessions()">Refresh</button>
+            <span class="section-count" id="sessionCount">0 sessions</span>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Platform</th>
+              <th>Duration</th>
+              <th>Questions</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody id="sessionsTable">
+            <tr><td colspan="5" class="loading">Loading sessions...</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </div>
 
   <script>
     // API Configuration
     const API_URL = 'https://api-beta-three-38.vercel.app';
 
-    // Admin token (in production, use secure auth)
-    const ADMIN_TOKEN = localStorage.getItem('admin_token') || prompt('Enter admin token:') || '';
-    localStorage.setItem('admin_token', ADMIN_TOKEN);
+    // Clerk publishable key - loaded from window.__CLERK_PUBLISHABLE_KEY__
+
+    // UI Elements
+    const loginScreen = document.getElementById('loginScreen');
+    const accessDenied = document.getElementById('accessDenied');
+    const adminDashboard = document.getElementById('adminDashboard');
+    const loginError = document.getElementById('loginError');
+    const adminEmailEl = document.getElementById('adminEmail');
+    const signInBtn = document.getElementById('signInBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    // Initialize Clerk
+    async function initClerk() {
+      try {
+        await Clerk.load();
+
+        if (Clerk.user) {
+          await checkAdminAccess();
+        } else {
+          showLogin();
+        }
+
+        // Sign in button
+        signInBtn.addEventListener('click', () => {
+          Clerk.openSignIn({
+            parentUrl: window.location.origin,
+            afterSignInUrl: window.location.href,
+            afterSignUpUrl: window.location.href
+          });
+        });
+
+        // Logout button
+        logoutBtn.addEventListener('click', () => {
+          Clerk.signOut().then(() => {
+            showLogin();
+          });
+        });
+
+        // Handle redirect back
+        Clerk.addListener(({ type }) => {
+          if (type === 'user' && Clerk.user) {
+            checkAdminAccess();
+          }
+        });
+
+      } catch (error) {
+        console.error('Clerk init error:', error);
+        showLoginError('Failed to initialize authentication. Please refresh.');
+      }
+    }
+
+    async function checkAdminAccess() {
+      const user = Clerk.user;
+      if (!user) {
+        showLogin();
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/api/clerk/verify-admin`, {
+          headers: {
+            'x-clerk-user-id': user.id
+          }
+        });
+
+        const data = await response.json();
+
+        if (data.isAdmin) {
+          showDashboard(user);
+        } else {
+          showAccessDenied();
+        }
+      } catch (error) {
+        console.error('Admin check error:', error);
+        showAccessDenied();
+      }
+    }
+
+    function showLogin() {
+      loginScreen.classList.remove('hidden');
+      accessDenied.classList.add('hidden');
+      adminDashboard.classList.add('hidden');
+    }
+
+    function showLoginError(message) {
+      loginError.textContent = message;
+      loginError.classList.remove('hidden');
+    }
+
+    function showAccessDenied() {
+      loginScreen.classList.add('hidden');
+      accessDenied.classList.remove('hidden');
+      adminDashboard.classList.add('hidden');
+    }
+
+    function showDashboard(user) {
+      loginScreen.classList.add('hidden');
+      accessDenied.classList.add('hidden');
+      adminDashboard.classList.remove('hidden');
+
+      adminEmailEl.textContent = user.emailAddresses[0]?.emailAddress || user.primaryEmailAddress?.emailAddress || 'Admin';
+
+      // Set up nav buttons
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          showSection(e.target.dataset.section);
+        });
+      });
+
+      // Load all data
+      loadAll();
+    }
 
     // Fetch with auth
     async function apiFetch(endpoint, options = {}) {
+      const user = Clerk.user;
+
       const response = await fetch(`${API_URL}${endpoint}`, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${ADMIN_TOKEN}`,
+          'x-clerk-user-id': user.id,
           ...options.headers
         }
       });
@@ -322,19 +565,6 @@
 
       return response.json();
     }
-
-    // Initialize
-    document.addEventListener('DOMContentLoaded', async () => {
-      // Set up nav buttons
-      document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          showSection(e.target.dataset.section);
-        });
-      });
-
-      // Load all data
-      await loadAll();
-    });
 
     async function loadAll() {
       try {
@@ -348,7 +578,7 @@
         console.error('Failed to load data:', error);
         document.getElementById('statUsers').textContent = 'Error';
         document.querySelector('#usersTable').innerHTML =
-          `<tr><td colspan="7" class="loading" style="color: #ef4444;">Failed to connect to API. Check admin token.</td></tr>`;
+          `<tr><td colspan="7" class="loading" style="color: #ef4444;">Failed to connect to API</td></tr>`;
       }
     }
 
@@ -371,7 +601,6 @@
 
     async function loadStats() {
       try {
-        // Fetch all users to calculate stats
         const data = await apiFetch('/api/admin/stats');
 
         document.getElementById('statUsers').textContent = data.totalUsers || 0;
@@ -385,7 +614,6 @@
         document.getElementById('statRevenueChange').textContent = `+${data.revenueGrowth || 0}%`;
 
       } catch (error) {
-        // Fallback: show last known stats
         document.getElementById('statUsersChange').textContent = 'Could not load';
         document.getElementById('statUsersChange').classList.add('error');
       }
@@ -540,6 +768,9 @@
       const secs = Math.floor((ms % 60000) / 1000);
       return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
+
+    // Initialize on load
+    window.addEventListener('load', initClerk);
   </script>
 </body>
 </html>

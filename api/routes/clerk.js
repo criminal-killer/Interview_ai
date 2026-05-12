@@ -100,6 +100,32 @@ module.exports = {
     }
   },
 
+  // Verify admin access
+  verifyAdmin: async (req, res) => {
+    try {
+      const clerkUserId = req.headers['x-clerk-user-id'];
+      if (!clerkUserId) {
+        return res.status(401).json({ error: 'Unauthorized', isAdmin: false });
+      }
+
+      // Find user by Clerk ID
+      const user = findUserByClerkId(clerkUserId);
+
+      if (!user) {
+        return res.status(404).json({ error: 'User not found', isAdmin: false });
+      }
+
+      // Check if user is admin
+      const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase());
+      const isAdmin = adminEmails.includes(user.email.toLowerCase()) || user.plan === 'enterprise';
+
+      res.json({ isAdmin, user: { id: user.id, email: user.email, name: user.name, plan: user.plan } });
+    } catch (error) {
+      console.error('Verify admin error:', error);
+      res.status(500).json({ error: 'Failed to verify admin', isAdmin: false });
+    }
+  },
+
   // Get user profile by Clerk ID (for frontend use)
   getProfile: async (req, res) => {
     try {

@@ -22,6 +22,9 @@ app.get('/api/health', (req, res) => {
 // Clerk webhook (needs raw body for signature verification)
 app.post('/api/clerk/webhook', express.raw({ type: 'application/json' }), require('./routes/clerk').webhook);
 
+// Clerk auth endpoints
+app.get('/api/clerk/verify-admin', require('./routes/clerk').verifyAdmin);
+
 // Clerk user routes (authenticated via x-clerk-user-id header)
 app.get('/api/user/profile', require('./routes/clerk').getProfile);
 app.put('/api/user/profile', require('./routes/clerk').updateProfile);
@@ -50,7 +53,7 @@ app.get('/api/referrals', require('./routes/clerk').getReferrals);
 app.post('/api/sessions', require('./routes/clerk').saveSession);
 app.get('/api/sessions', require('./routes/clerk').getSessions);
 
-// Admin routes
+// Admin routes (use x-clerk-user-id header)
 app.get('/api/admin/stats', require('./routes/admin').stats);
 app.get('/api/admin/users', require('./routes/admin').users);
 app.get('/api/admin/payouts', require('./routes/admin').payouts);
