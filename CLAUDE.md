@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-InterviewAce is a Chrome browser extension that provides AI-powered interview assistance. The extension listens to interview questions via speech recognition and provides natural, conversational answers based on the user's resume and job description.
+Blinkora is a Chrome browser extension that provides AI-powered interview assistance. The extension listens to interview questions via speech recognition and provides natural, conversational answers based on the user's resume and job description.
 
 ## Chrome Extension Structure (Manifest V3)
 
@@ -20,7 +20,7 @@ Communication between contexts uses `chrome.runtime.sendMessage` and `chrome.run
 
 To test changes:
 1. Open `chrome://extensions/`
-2. Click "Reload" on the InterviewAce card
+2. Click "Reload" on the Blinkora card
 3. For major changes, click "Remove" then "Load unpacked" to reset
 
 ## Backend Server
@@ -78,27 +78,14 @@ Key pages:
   - `GROQ_API_KEY` = `gsk_xxxx`
   - `PAYSTACK_SECRET_KEY` = `sk_test_xxxx`
   - `PAYSTACK_PUBLIC_KEY` = `pk_test_xxxx`
-  - `FRONTEND_URL` = `https://interviewace.com`
+  - `CLERK_SECRET_KEY` = `sk_test_xxxx`
+  - `CLERK_WEBHOOK_SECRET` = `whsec_xxxx`
+  - `ADMIN_EMAILS` = comma-separated admin emails
+  - `FRONTEND_URL` = `https://blinkora-plum.vercel.app`
 
 ### Admin Project
 - Root Directory: `admin`
 - Framework: `Other`
-
-### Required Environment Variables
-
-**Dashboard (.env):**
-```
-VITE_API_URL=https://api.interviewace.com
-VITE_CLERK_PUBLISHABLE_KEY=pk_test_xxxxx
-```
-
-**API (Vercel):**
-```
-GROQ_API_KEY=gsk_xxxx
-PAYSTACK_SECRET_KEY=sk_test_xxxx
-PAYSTACK_PUBLIC_KEY=pk_test_xxxx
-FRONTEND_URL=https://interviewace.com
-```
 
 ## Key Files
 
