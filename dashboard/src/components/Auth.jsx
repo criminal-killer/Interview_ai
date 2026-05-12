@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { GraduationCap, Mail, Lock, User, ArrowRight, Eye, EyeOff, Check } from 'lucide-react'
 
+const API_URL = import.meta.env.VITE_API_URL || 'https://api-beta-three-38.vercel.app'
+
 export default function Auth({ onAuth }) {
   const [isLogin, setIsLogin] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -15,18 +18,39 @@ export default function Auth({ onAuth }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
+    setError('')
 
-    // Simulate auth - in production use Clerk
-    setTimeout(() => {
-      onAuth({
-        id: 'user_' + Date.now(),
-        name: formData.name || 'User',
-        email: formData.email,
-        plan: 'free',
-        referralCode: generateReferralCode()
+    try {
+      const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register'
+      const body = isLogin
+        ? { email: formData.email, password: formData.password }
+        : {
+            name: formData.name,
+            email: formData.email,
+            password: formData.password,
+            referralCode: formData.referralCode
+          }
+
+      const response = await fetch(`${API_URL}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
       })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Authentication failed')
+      }
+
+      // Store token and user data
+      localStorage.setItem('interviewace_token', data.token)
+      onAuth(data.user)
+    } catch (err) {
+      setError(err.message)
+    } finally {
       setLoading(false)
-    }, 1000)
+    }
   }
 
   const handleInputChange = (e) => {
@@ -50,6 +74,12 @@ export default function Auth({ onAuth }) {
           <h2 className="text-xl font-semibold text-white mb-6">
             {isLogin ? 'Welcome back' : 'Create your account'}
           </h2>
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm">
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
@@ -133,7 +163,7 @@ export default function Auth({ onAuth }) {
             <p className="text-slate-400 text-sm">
               {isLogin ? "Don't have an account?" : 'Already have an account?'}
               <button
-                onClick={() => setIsLogin(!isLogin)}
+                onClick={() => { setIsLogin(!isLogin); setError('') }}
                 className="text-primary hover:underline ml-1 font-medium"
               >
                 {isLogin ? 'Sign up' : 'Sign in'}
@@ -186,8 +216,4 @@ export default function Auth({ onAuth }) {
       </div>
     </div>
   )
-}
-
-function generateReferralCode() {
-  return Math.random().toString(36).substring(2, 8).toUpperCase()
 }

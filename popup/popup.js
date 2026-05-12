@@ -1,6 +1,9 @@
 // InterviewAce Popup - Simple sync UI
 // Opens dashboard and syncs user data
 
+const DASHBOARD_URL = 'https://blinkora-plum.vercel.app'
+const API_URL = 'https://api-beta-three-38.vercel.app'
+
 document.addEventListener('DOMContentLoaded', async () => {
   // Load state from storage
   const state = await chrome.storage.local.get(['interviewAceState', 'userData']);
@@ -10,8 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Open dashboard button
   document.getElementById('openDashboard').addEventListener('click', () => {
-    // Open the web dashboard
-    chrome.tabs.create({ url: 'https://interviewace.com/dashboard' });
+    chrome.tabs.create({ url: DASHBOARD_URL });
   });
 
   // Sync button to pull latest from dashboard
@@ -20,7 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Help link
   document.getElementById('helpLink').addEventListener('click', (e) => {
     e.preventDefault();
-    chrome.tabs.create({ url: 'https://interviewace.com/help' });
+    chrome.tabs.create({ url: `${DASHBOARD_URL}/help` });
   });
 });
 
@@ -41,7 +43,7 @@ async function syncData() {
     }
 
     // Fetch user data from backend API
-    const response = await fetch('https://api.interviewace.com/api/user/profile', {
+    const response = await fetch(`${API_URL}/api/user/profile`, {
       headers: {
         'Authorization': `Bearer ${userData.token}`
       }
@@ -69,7 +71,10 @@ async function syncData() {
     statusEl.classList.add('synced');
 
     // Update plan badge
-    document.getElementById('planBadge').textContent = `${profile.subscriptionTier || 'Free'} Plan`;
+    const planBadge = document.getElementById('planBadge')
+    if (planBadge) {
+      planBadge.textContent = `${profile.subscriptionTier || 'Free'} Plan`
+    }
 
     setTimeout(() => {
       statusEl.textContent = 'Last sync: just now';
