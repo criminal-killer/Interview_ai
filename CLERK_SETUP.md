@@ -29,7 +29,10 @@ Secret Key (starts with sk_):          sk_test_xxxxxxxxxxxx
    ```
    CLERK_SECRET_KEY=sk_test_xxxxxxxxxxxx
    CLERK_WEBHOOK_SECRET=whsec_xxxxxxxxxxxx
+   ADMIN_EMAILS=your-email@gmail.com,another-admin@gmail.com
    ```
+
+**ADMIN_EMAILS**: Comma-separated list of emails that get admin access to the admin panel.
 
 ---
 
@@ -98,6 +101,18 @@ The code has been updated to use Clerk authentication:
 ### API (`api/`)
 - **routes/clerk.js**: New file handling Clerk webhooks and user profile routes
 - **index.js**: Added Clerk webhook endpoint and updated routes
+
+---
+
+## Admin Panel Access
+
+After setting up Clerk and adding `ADMIN_EMAILS` to the API:
+
+1. Go to **Admin Vercel URL**: `https://admin-intv.vercel.app/?key=pk_test_your_publishable_key`
+2. Sign in with the Google account that's in `ADMIN_EMAILS`
+3. You'll see the admin dashboard
+
+**To add more admins:** Update the `ADMIN_EMAILS` environment variable in Vercel API project.
 
 ---
 
