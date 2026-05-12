@@ -1,23 +1,22 @@
 import { SignIn, SignUp } from '@clerk/clerk-react'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { GraduationCap, Check } from 'lucide-react'
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true)
 
-  // Check if Clerk key is configured
   const clerkKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
-  const hasClerkKey = clerkKey && clerkKey !== 'pk_test_placeholder' && clerkKey.includes('pk_test_')
+  const hasClerkKey = clerkKey && clerkKey.includes('pk_test_')
 
   if (!hasClerkKey) {
     return (
       <div className="min-h-screen bg-dark flex items-center justify-center p-6">
-        <div className="w-full max-w-md text-center">
+        <div className="text-center">
           <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center mx-auto mb-4">
             <GraduationCap className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">Blinkora</h1>
-          <p className="text-slate-400">Configuration required. Please set VITE_CLERK_PUBLISHABLE_KEY</p>
+          <p className="text-slate-400">Configuration required. Contact support.</p>
         </div>
       </div>
     )
