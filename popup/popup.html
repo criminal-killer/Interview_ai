@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>InterviewAce</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; width: 340px; min-height: 200px; background: #0f172a; color: #e2e8f0; }
+
+    .container {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo {
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 24px;
+      color: white;
+    }
+
+    h1 { font-size: 20px; font-weight: 600; color: #f8fafc; }
+    .tagline { font-size: 13px; color: #64748b; }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: #1e293b;
+      border-radius: 20px;
+      font-size: 13px;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+    }
+    .status.ready .status-dot { background: #94a3b8; }
+    .status.ready { color: #94a3b8; }
+    .status.ready .status-dot { background: #94a3b8; }
+
+    .setup-card {
+      width: 100%;
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .setup-card h3 {
+      font-size: 14px;
+      color: #94a3b8;
+      margin-bottom: 8px;
+    }
+
+    .open-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .open-btn:hover { opacity: 0.9; }
+
+    .sync-status {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 8px;
+    }
+    .sync-status.synced { color: #22c55e; }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      padding-top: 12px;
+      border-top: 1px solid #1e293b;
+      font-size: 12px;
+    }
+    .footer a { color: #6366f1; text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+    .plan-badge {
+      padding: 4px 10px;
+      background: #334155;
+      border-radius: 12px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">IA</div>
+    <div>
+      <h1>InterviewAce</h1>
+      <p class="tagline">Your AI Interview Assistant</p>
+    </div>
+
+    <div class="status ready">
+      <span class="status-dot"></span>
+      <span>Ready</span>
+    </div>
+
+    <div class="setup-card">
+      <h3>Setup your resume & job details</h3>
+      <button class="open-btn" id="openDashboard">Open Dashboard</button>
+      <p class="sync-status" id="syncStatus">Not synced</p>
+    </div>
+
+    <div class="footer">
+      <a href="#" id="helpLink">Help</a>
+      <span class="plan-badge" id="planBadge">Free Plan</span>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+{
+  "manifest_version": 3,
+  "name": "InterviewAce",
+  "version": "1.0.0",
+  "description": "AI-powered interview assistant - invisible to interviewers, helpful for candidates",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "tabs",
+    "scripting",
+    "clipboardRead",
+    "clipboardWrite",
+    "microphone",
+    "displayCapture",
+    "unlimitedStorage"
+  ],
+  "host_permissions": [
+    "https://api.groq.com/*",
+    "https://api.openai.com/*",
+    "https://api.anthropic.com/*",
+    "https://generativelanguage.googleapis.com/*",
+    "https://*.zoom.us/*",
+    "https://*.google.com/*",
+    "https://*.teams.microsoft.com/*",
+    "https://*.leetcode.com/*",
+    "https://*.hackerrank.com/*",
+    "https://*.webex.com/*"
+  ],
+  "background": {
+    "service_worker": "background/background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "assets/icons/icon16.png",
+      "32": "assets/icons/icon32.png",
+      "48": "assets/icons/icon48.png",
+      "128": "assets/icons/icon128.png"
+    },
+    "default_title": "InterviewAce"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.zoom.us/*",
+        "https://*.google.com/*",
+        "https://*.teams.microsoft.com/*",
+        "https://*.leetcode.com/*",
+        "https://*.hackerrank.com/*",
+        "https://*.codility.com/*",
+        "https://*.webex.com/*",
+        "https://*.amazon.com/chime/*",
+        "*://*/*"
+      ],
+      "js": ["content/content.js"],
+      "css": ["content/content.css"],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["content/overlay.js", "content/stealth.js", "assets/*"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "icons": {
+    "16": "assets/icons/icon16.png",
+    "32": "assets/icons/icon32.png",
+    "48": "assets/icons/icon48.png",
+    "128": "assets/icons/icon128.png"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "interviewace-api",
+  "version": "1.0.0",
+  "description": "InterviewAce API - Vercel Serverless Functions",
+  "main": "index.js",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "helmet": "^7.1.0",
+    "serverless-http": "^3.2.0"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\CRIMINAL_KILLER\\\\Desktop\\\\EXTENSION\" -Recurse)",
+      "Bash(Select-Object FullName)",
+      "Bash(powershell -ExecutionPolicy Bypass -File create-icons.ps1)",
+      "Bash(npm run *)",
+      "Bash(git init *)",
+      "Bash(git remote *)",
+      "Bash(git add *)"
+    ]
+  }
+}
