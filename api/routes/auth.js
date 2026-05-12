@@ -1,8 +1,9 @@
 // Auth routes
 const crypto = require('crypto');
+const { usersStore } = require('../store');
 
-// Simple in-memory store (replace with Turso in production)
-const users = new Map();
+// Use shared store
+const users = usersStore;
 
 module.exports = {
   // Register new user
@@ -33,6 +34,8 @@ module.exports = {
         referralCode: userReferralCode,
         referredBy: null,
         referralEarnings: 0,
+        pendingPayouts: [],
+        sessions: [],
         resumes: [],
         jobDetails: {},
         settings: {
@@ -46,11 +49,21 @@ module.exports = {
 
       // Handle referral
       if (referralCode) {
-        // Find referrer (in production, search Turso DB)
         for (const [email, u] of users) {
           if (u.referralCode === referralCode) {
             user.referredBy = u.id;
             u.referralEarnings = (u.referralEarnings || 0) + 5;
+
+            // Create pending payout record
+            u.pendingPayouts = u.pendingPayouts || [];
+            u.pendingPayouts.push({
+              id: crypto.randomUUID(),
+              refereeId: userId,
+              refereeName: user.name,
+              amount: 5,
+              status: 'pending',
+              createdAt: new Date().toISOString()
+            });
             break;
           }
         }
@@ -58,7 +71,7 @@ module.exports = {
 
       users.set(email, user);
 
-      // Generate token (in production, use Clerk JWT)
+      // Generate token
       const token = Buffer.from(userId).toString('base64');
 
       res.status(201).json({
@@ -111,6 +124,19 @@ module.exports = {
       console.error('Login error:', error);
       res.status(500).json({ error: 'Login failed' });
     }
+  },
+
+  // Get user by ID (for admin)
+  getUserById: (userId) => {
+    for (const [email, user] of users) {
+      if (user.id === userId) return user;
+    }
+    return null;
+  },
+
+  // Get all users (for admin)
+  getAllUsers: () => {
+    return Array.from(users.values());
   }
 };
 

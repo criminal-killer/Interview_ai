@@ -51,6 +51,14 @@ app.get('/api/referrals', require('./routes/user').getReferrals);
 app.post('/api/sessions', require('./routes/user').saveSession);
 app.get('/api/sessions', require('./routes/user').getSessions);
 
+// Admin routes
+app.get('/api/admin/stats', require('./routes/admin').stats);
+app.get('/api/admin/users', require('./routes/admin').users);
+app.get('/api/admin/payouts', require('./routes/admin').payouts);
+app.get('/api/admin/sessions', require('./routes/admin').sessions);
+app.post('/api/admin/payout', require('./routes/admin').payout);
+app.put('/api/admin/users/:id/plan', require('./routes/admin').updateUserPlan);
+
 // Error handling
 app.use((err, req, res, next) => {
   console.error('API Error:', err);
