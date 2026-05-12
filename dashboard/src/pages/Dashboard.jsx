@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useUser } from '@clerk/clerk-react'
 import Header from '../components/Header'
 import ResumeSection from '../components/ResumeSection'
 import JobSection from '../components/JobSection'
@@ -6,19 +7,64 @@ import SettingsSection from '../components/SettingsSection'
 import PricingSection from '../components/PricingSection'
 import { BookOpen, Settings, CreditCard, Download, ChevronRight, Check } from 'lucide-react'
 
-export default function Dashboard({ user, onLogout }) {
+const API_URL = import.meta.env.VITE_API_URL || 'https://api-beta-three-38.vercel.app'
+
+export default function Dashboard({ onLogout }) {
+  const { user, isLoaded } = useUser()
   const [activeTab, setActiveTab] = useState('setup')
   const [resumeCount, setResumeCount] = useState(2)
+  const [userData, setUserData] = useState(null)
+  const [loading, setLoading] = useState(true)
 
-  const tabs = [
-    { id: 'setup', label: 'Setup', icon: BookOpen },
-    { id: 'settings', label: 'Settings', icon: Settings },
-    { id: 'billing', label: 'Billing', icon: CreditCard },
-  ]
+  useEffect(() => {
+    if (isLoaded && user) {
+      fetchUserData()
+    }
+  }, [isLoaded, user])
+
+  const fetchUserData = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/user/profile`, {
+        headers: {
+          'x-clerk-user-id': user.id
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setUserData(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch user data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!isLoaded || loading) {
+    return (
+      <div className="min-h-screen bg-dark flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  const displayUser = userData || {
+    id: user.id,
+    email: user.primaryEmailAddress?.emailAddress,
+    name: user.fullName || user.firstName || 'User',
+    plan: 'free',
+    weeklyTimeUsed: 0,
+    weeklyLimit: 600000 // 10 minutes in ms
+  }
+
+  const weeklyLimit = displayUser.plan === 'starter' ? 1800000 :
+                      displayUser.plan === 'pro' ? Infinity :
+                      600000 // 10 minutes free
 
   return (
     <div className="min-h-screen bg-dark">
-      <Header user={user} onLogout={onLogout} />
+      <Header user={displayUser} onLogout={onLogout} />
 
       <main className="max-w-6xl mx-auto px-6 py-8">
         {/* Progress Indicator */}
@@ -27,8 +73,8 @@ export default function Dashboard({ user, onLogout }) {
             <Check className="w-4 h-4 text-green-500" />
             <span>Account Created</span>
             <ChevronRight className="w-4 h-4" />
-            <span className={user.plan !== 'free' ? 'text-green-500' : ''}>
-              {user.plan !== 'free' ? 'Subscribed' : 'Free Plan'}
+            <span className={displayUser.plan !== 'free' ? 'text-green-500' : ''}>
+              {displayUser.plan !== 'free' ? 'Subscribed' : 'Free Plan'}
             </span>
             <ChevronRight className="w-4 h-4" />
             <span className="text-primary">Setup Complete</span>
@@ -39,21 +85,27 @@ export default function Dashboard({ user, onLogout }) {
             <div className="flex justify-between items-center mb-4">
               <div>
                 <h3 className="text-lg font-semibold text-white">Weekly Interview Time</h3>
-                <p className="text-sm text-slate-400">Resets every Monday</p>
+                <p className="text-sm text-slate-400">
+                  {weeklyLimit === Infinity ? 'Unlimited access' : 'Resets every Monday'}
+                </p>
               </div>
               <div className="text-right">
                 <span className="text-2xl font-bold text-white">
-                  {formatTime(user.weeklyTimeUsed)}
+                  {weeklyLimit === Infinity ? '∞' : formatTime(displayUser.weeklyTimeUsed || 0)}
                 </span>
-                <span className="text-slate-400"> / {formatTime(user.weeklyLimit)}</span>
+                {weeklyLimit !== Infinity && (
+                  <span className="text-slate-400"> / {formatTime(weeklyLimit)}</span>
+                )}
               </div>
             </div>
-            <div className="h-2 bg-border rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all"
-                style={{ width: `${(user.weeklyTimeUsed / user.weeklyLimit) * 100}%` }}
-              />
-            </div>
+            {weeklyLimit !== Infinity && (
+              <div className="h-2 bg-border rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all"
+                  style={{ width: `${Math.min((displayUser.weeklyTimeUsed / weeklyLimit) * 100, 100)}%` }}
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -106,6 +158,12 @@ export default function Dashboard({ user, onLogout }) {
     </div>
   )
 }
+
+const tabs = [
+  { id: 'setup', label: 'Setup', icon: BookOpen },
+  { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'billing', label: 'Billing', icon: CreditCard },
+]
 
 function InstallExtension() {
   return (

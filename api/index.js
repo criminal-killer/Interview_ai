@@ -19,22 +19,21 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Auth routes
-app.post('/api/auth/register', require('./routes/auth').register);
-app.post('/api/auth/login', require('./routes/auth').login);
+// Clerk webhook (needs raw body for signature verification)
+app.post('/api/clerk/webhook', express.raw({ type: 'application/json' }), require('./routes/clerk').webhook);
 
-// User routes
-app.get('/api/user/profile', require('./routes/user').profile);
-app.put('/api/user/profile', require('./routes/user').updateProfile);
+// Clerk user routes (authenticated via x-clerk-user-id header)
+app.get('/api/user/profile', require('./routes/clerk').getProfile);
+app.put('/api/user/profile', require('./routes/clerk').updateProfile);
 
 // Resume routes
-app.get('/api/resumes', require('./routes/user').getResumes);
-app.post('/api/resumes', require('./routes/user').addResume);
-app.delete('/api/resumes/:id', require('./routes/user').deleteResume);
+app.get('/api/resumes', require('./routes/clerk').getResumes);
+app.post('/api/resumes', require('./routes/clerk').addResume);
+app.delete('/api/resumes/:id', require('./routes/clerk').deleteResume);
 
 // Job routes
-app.get('/api/jobs', require('./routes/user').getJobs);
-app.post('/api/jobs', require('./routes/user').addJob);
+app.get('/api/jobs', require('./routes/clerk').getJobs);
+app.post('/api/jobs', require('./routes/clerk').addJob);
 
 // AI routes
 app.post('/api/ai/answer', require('./routes/ai').answer);
@@ -45,11 +44,11 @@ app.post('/api/billing/create-checkout', require('./routes/billing').createCheck
 app.post('/api/billing/webhook', require('./routes/billing').webhook);
 
 // Referral routes
-app.get('/api/referrals', require('./routes/user').getReferrals);
+app.get('/api/referrals', require('./routes/clerk').getReferrals);
 
 // Sessions routes
-app.post('/api/sessions', require('./routes/user').saveSession);
-app.get('/api/sessions', require('./routes/user').getSessions);
+app.post('/api/sessions', require('./routes/clerk').saveSession);
+app.get('/api/sessions', require('./routes/clerk').getSessions);
 
 // Admin routes
 app.get('/api/admin/stats', require('./routes/admin').stats);
