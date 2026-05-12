@@ -1,12 +1,27 @@
-// AI routes - Groq integration
-const { getUserFromRequest } = require('./user');
+// AI routes - Groq integration with Clerk auth
+const { usersStore } = require('../store');
+
+// Find user by Clerk ID
+function findUserByClerkId(clerkUserId) {
+  if (!clerkUserId) return null;
+  for (const [email, user] of usersStore) {
+    if (user.id === clerkUserId) {
+      return user;
+    }
+  }
+  return null;
+}
 
 module.exports = {
   // Generate answer
   answer: async (req, res) => {
     try {
-      const user = getUserFromRequest(req, getUsersFromContext());
-      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+      const clerkUserId = req.headers['x-clerk-user-id'];
+      const user = findUserByClerkId(clerkUserId);
+
+      if (!user) {
+        return res.status(401).json({ error: 'Unauthorized - user not found. Please sign in again.' });
+      }
 
       const { question, context } = req.body;
 
@@ -18,10 +33,11 @@ module.exports = {
       const limits = { free: 600000, starter: 1800000, pro: Infinity };
       const limit = limits[user.plan] || limits.free;
 
-      if ((user.weeklyTimeUsed || 0) >= limit) {
+      if (limit !== Infinity && (user.weeklyTimeUsed || 0) >= limit) {
         return res.status(403).json({
           error: 'Weekly time limit reached',
-          upgrade: true
+          upgrade: true,
+          currentPlan: user.plan
         });
       }
 
@@ -34,7 +50,7 @@ module.exports = {
       // Call Groq API
       const groqApiKey = process.env.GROQ_API_KEY;
       if (!groqApiKey) {
-        return res.status(500).json({ error: 'AI not configured' });
+        return res.status(500).json({ error: 'AI not configured on server' });
       }
 
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -52,6 +68,8 @@ module.exports = {
       });
 
       if (!response.ok) {
+        const err = await response.text();
+        console.error('Groq API error:', err);
         throw new Error('AI service error');
       }
 
@@ -64,18 +82,25 @@ module.exports = {
       // Update time used
       user.weeklyTimeUsed = (user.weeklyTimeUsed || 0) + 5000; // ~5 sec per answer
 
-      res.json({ answer });
+      res.json({
+        answer,
+        timeRemaining: limit === Infinity ? Infinity : limit - user.weeklyTimeUsed
+      });
     } catch (error) {
       console.error('AI error:', error);
-      res.status(500).json({ error: 'Failed to generate answer' });
+      res.status(500).json({ error: 'Failed to generate answer: ' + error.message });
     }
   },
 
   // Generate code solution
   codeSolution: async (req, res) => {
     try {
-      const user = getUserFromRequest(req, getUsersFromContext());
-      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+      const clerkUserId = req.headers['x-clerk-user-id'];
+      const user = findUserByClerkId(clerkUserId);
+
+      if (!user) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
 
       const { code, language, problem } = req.body;
 
@@ -111,6 +136,10 @@ Keep responses concise and focused on helping the candidate understand the solut
           max_tokens: 500
         })
       });
+
+      if (!response.ok) {
+        throw new Error('AI service error');
+      }
 
       const data = await response.json();
       const solution = data.choices[0].message.content;
@@ -151,9 +180,4 @@ RULES:
   prompt += `Give a natural, conversational answer (2-3 sentences max):`;
 
   return prompt;
-}
-
-// Placeholder - in production, import from auth.js
-function getUsersFromContext() {
-  return new Map();
 }

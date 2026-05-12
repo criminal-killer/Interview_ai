@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useUser } from '@clerk/clerk-react'
 import Header from '../components/Header'
 import ResumeSection from '../components/ResumeSection'
 import JobSection from '../components/JobSection'
@@ -9,53 +8,73 @@ import { BookOpen, Settings, CreditCard, Download, ChevronRight, Check } from 'l
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://api-beta-three-38.vercel.app'
 
-export default function Dashboard({ onLogout }) {
-  const { user, isLoaded } = useUser()
+export default function Dashboard({ clerkUser, onLogout }) {
   const [activeTab, setActiveTab] = useState('setup')
   const [resumeCount, setResumeCount] = useState(2)
   const [userData, setUserData] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (isLoaded && user) {
+    if (clerkUser) {
       fetchUserData()
     }
-  }, [isLoaded, user])
+  }, [clerkUser])
 
   const fetchUserData = async () => {
     try {
       const response = await fetch(`${API_URL}/api/user/profile`, {
         headers: {
-          'x-clerk-user-id': user.id
+          'x-clerk-user-id': clerkUser.id
         }
       })
 
       if (response.ok) {
         const data = await response.json()
         setUserData(data)
+      } else {
+        console.warn('Failed to fetch user data, using Clerk data only')
+        // Use Clerk data as fallback
+        setUserData({
+          id: clerkUser.id,
+          email: clerkUser.primaryEmailAddress?.emailAddress || '',
+          name: clerkUser.fullName || clerkUser.firstName || 'User',
+          plan: 'free',
+          weeklyTimeUsed: 0
+        })
       }
     } catch (error) {
       console.error('Failed to fetch user data:', error)
+      // Use Clerk data as fallback
+      setUserData({
+        id: clerkUser.id,
+        email: clerkUser.primaryEmailAddress?.emailAddress || '',
+        name: clerkUser.fullName || clerkUser.firstName || 'User',
+        plan: 'free',
+        weeklyTimeUsed: 0
+      })
     } finally {
       setLoading(false)
     }
   }
 
-  if (!isLoaded || loading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-dark flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-slate-400 text-sm">Loading dashboard...</p>
+        </div>
       </div>
     )
   }
 
   const displayUser = userData || {
-    id: user.id,
-    email: user.primaryEmailAddress?.emailAddress,
-    name: user.fullName || user.firstName || 'User',
+    id: clerkUser?.id,
+    email: clerkUser?.primaryEmailAddress?.emailAddress || '',
+    name: clerkUser?.fullName || clerkUser?.firstName || 'User',
     plan: 'free',
     weeklyTimeUsed: 0,
-    weeklyLimit: 600000 // 10 minutes in ms
+    weeklyLimit: 600000
   }
 
   const weeklyLimit = displayUser.plan === 'starter' ? 1800000 :

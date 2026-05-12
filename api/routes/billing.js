@@ -1,10 +1,10 @@
-// Billing routes - Paystack integration
+// Billing routes - Paystack integration with Clerk auth
 const crypto = require('crypto');
-const { getUserFromRequest } = require('./user');
+const { usersStore } = require('../store');
 
-// Paystack test keys (replace with production keys)
-const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY || 'sk_test_xxx';
-const PAYSTACK_PUBLIC = process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_xxx';
+// Paystack keys
+const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
+const PAYSTACK_PUBLIC = process.env.PAYSTACK_PUBLIC_KEY;
 
 const plans = {
   starter: { monthly: 19.99, yearly: 149.99 },
@@ -12,12 +12,27 @@ const plans = {
   enterprise: { monthly: 49.99, yearly: 399.99 }
 };
 
+// Find user by Clerk ID
+function findUserByClerkId(clerkUserId) {
+  if (!clerkUserId) return null;
+  for (const [email, user] of usersStore) {
+    if (user.id === clerkUserId) {
+      return user;
+    }
+  }
+  return null;
+}
+
 module.exports = {
   // Create checkout session
   createCheckout: async (req, res) => {
     try {
-      const user = getUserFromRequest(req, getUsersFromContext());
-      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+      const clerkUserId = req.headers['x-clerk-user-id'];
+      const user = findUserByClerkId(clerkUserId);
+
+      if (!user) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
 
       const { plan, interval } = req.body;
 
@@ -45,7 +60,7 @@ module.exports = {
             interval,
             userEmail: email
           },
-          callback_url: `${process.env.FRONTEND_URL || 'https://interviewace.com'}/billing/callback`
+          callback_url: `${process.env.FRONTEND_URL || 'https://blinkora-plum.vercel.app'}/billing/callback`
         })
       });
 
@@ -81,18 +96,17 @@ module.exports = {
       const event = req.body;
 
       if (event.event === 'charge.success') {
-        const { metadata, reference } = event.data;
+        const { metadata } = event.data;
 
         // Update user subscription
-        const users = getUsersFromContext();
-        for (const [email, user] of users) {
+        for (const [email, user] of usersStore) {
           if (user.id === metadata.userId) {
             user.plan = metadata.plan;
-            user.subscriptionRef = reference;
+            user.subscriptionRef = metadata.reference;
 
-            // Grant referral bonus
+            // Grant referral bonus to referrer
             if (user.referredBy) {
-              for (const [refEmail, refUser] of users) {
+              for (const [refEmail, refUser] of usersStore) {
                 if (refUser.id === user.referredBy) {
                   refUser.referralEarnings = (refUser.referralEarnings || 0) + 5;
                   break;
@@ -125,8 +139,3 @@ module.exports = {
     });
   }
 };
-
-// Placeholder - in production, import from auth.js
-function getUsersFromContext() {
-  return new Map();
-}

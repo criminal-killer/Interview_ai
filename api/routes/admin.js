@@ -1,20 +1,49 @@
-// Admin routes
+// Admin routes - with Clerk auth verification
 const { usersStore } = require('../store');
 
-// Use shared store
-const users = usersStore;
+// Verify admin access
+function verifyAdmin(clerkUserId) {
+  if (!clerkUserId) return { isAdmin: false, error: 'No user ID' };
+
+  const user = findUserByClerkId(clerkUserId);
+  if (!user) {
+    return { isAdmin: false, error: 'User not found' };
+  }
+
+  // Check if user is admin by email or plan
+  const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase());
+  const isAdmin = adminEmails.includes(user.email?.toLowerCase()) || user.plan === 'enterprise';
+
+  return { isAdmin, user };
+}
+
+function findUserByClerkId(clerkUserId) {
+  for (const [email, user] of usersStore) {
+    if (user.id === clerkUserId) {
+      return user;
+    }
+  }
+  return null;
+}
 
 module.exports = {
   // Get admin stats
   stats: async (req, res) => {
     try {
+      const clerkUserId = req.headers['x-clerk-user-id'];
+      const { isAdmin, error } = verifyAdmin(clerkUserId);
+
+      if (!isAdmin) {
+        return res.status(403).json({ error: error || 'Admin access required' });
+      }
+
       let totalUsers = 0;
       let subscribers = 0;
       let pendingPayouts = 0;
       let pendingPayoutCount = 0;
       let monthlyRevenue = 0;
 
-      for (const [email, user] of users) {
+      for (const [email, user] of usersStore) {
         totalUsers++;
         if (user.plan && user.plan !== 'free') {
           subscribers++;
@@ -48,9 +77,16 @@ module.exports = {
   // Get all users
   users: async (req, res) => {
     try {
+      const clerkUserId = req.headers['x-clerk-user-id'];
+      const { isAdmin, error } = verifyAdmin(clerkUserId);
+
+      if (!isAdmin) {
+        return res.status(403).json({ error: error || 'Admin access required' });
+      }
+
       const userList = [];
 
-      for (const [email, user] of users) {
+      for (const [email, user] of usersStore) {
         userList.push({
           id: user.id,
           name: user.name,
@@ -72,9 +108,16 @@ module.exports = {
   // Get all payouts
   payouts: async (req, res) => {
     try {
+      const clerkUserId = req.headers['x-clerk-user-id'];
+      const { isAdmin, error } = verifyAdmin(clerkUserId);
+
+      if (!isAdmin) {
+        return res.status(403).json({ error: error || 'Admin access required' });
+      }
+
       const payouts = [];
 
-      for (const [email, user] of users) {
+      for (const [email, user] of usersStore) {
         if (user.pendingPayouts) {
           for (const payout of user.pendingPayouts) {
             payouts.push({
@@ -101,9 +144,16 @@ module.exports = {
   // Get all sessions
   sessions: async (req, res) => {
     try {
+      const clerkUserId = req.headers['x-clerk-user-id'];
+      const { isAdmin, error } = verifyAdmin(clerkUserId);
+
+      if (!isAdmin) {
+        return res.status(403).json({ error: error || 'Admin access required' });
+      }
+
       const sessions = [];
 
-      for (const [email, user] of users) {
+      for (const [email, user] of usersStore) {
         if (user.sessions) {
           for (const session of user.sessions) {
             sessions.push({
@@ -131,9 +181,16 @@ module.exports = {
   // Process payout
   payout: async (req, res) => {
     try {
+      const clerkUserId = req.headers['x-clerk-user-id'];
+      const { isAdmin, error } = verifyAdmin(clerkUserId);
+
+      if (!isAdmin) {
+        return res.status(403).json({ error: error || 'Admin access required' });
+      }
+
       const { payoutId, action } = req.body;
 
-      for (const [email, user] of users) {
+      for (const [email, user] of usersStore) {
         if (user.pendingPayouts) {
           const payoutIndex = user.pendingPayouts.findIndex(p => p.id === payoutId);
           if (payoutIndex !== -1) {
@@ -164,9 +221,16 @@ module.exports = {
   // Update user plan
   updateUserPlan: async (req, res) => {
     try {
+      const clerkUserId = req.headers['x-clerk-user-id'];
+      const { isAdmin, error } = verifyAdmin(clerkUserId);
+
+      if (!isAdmin) {
+        return res.status(403).json({ error: error || 'Admin access required' });
+      }
+
       const { userId, plan } = req.body;
 
-      for (const [email, user] of users) {
+      for (const [email, user] of usersStore) {
         if (user.id === userId) {
           user.plan = plan;
           res.json({ success: true, user: { id: user.id, plan: user.plan } });
