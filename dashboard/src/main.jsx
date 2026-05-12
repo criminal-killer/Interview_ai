@@ -6,14 +6,9 @@ import './index.css'
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
-// For Clerk v5, use publishableKey prop
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <ClerkProvider
-      publishableKey={clerkPubKey}
-      routerPush={(to) => window.history.pushState(null, '', to)}
-      routerReplace={(to) => window.history.replaceState(null, '', to)}
-    >
+    <ClerkProvider publishableKey={clerkPubKey}>
       <App />
     </ClerkProvider>
   </React.StrictMode>,

@@ -1,4 +1,4 @@
-// InterviewAce Content Script
+// Blinkora Content Script
 // Injected into interview pages to detect questions and display answers
 
 (function() {
@@ -19,7 +19,7 @@
   init();
 
   function init() {
-    console.log('InterviewAce content script loaded');
+    console.log('Blinkora content script loaded');
 
     // Listen for messages from background
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -42,7 +42,7 @@
 
   function startSession(state) {
     isActive = true;
-    console.log('InterviewAce session started');
+    console.log('Blinkora session started');
     config.stealthMode = state.settings?.stealthMode ?? true;
 
     // Start detecting questions
@@ -53,7 +53,7 @@
 
   function stopSession() {
     isActive = false;
-    console.log('InterviewAce session stopped');
+    console.log('Blinkora session stopped');
     hideAnswer();
     stopQuestionDetection();
   }
@@ -189,10 +189,10 @@
 
   function createOverlay() {
     const overlay = document.createElement('div');
-    overlay.id = 'interviewace-overlay';
+    overlay.id = 'Blinkora-overlay';
     overlay.innerHTML = `
       <style>
-        #interviewace-overlay {
+        #Blinkora-overlay {
           position: fixed;
           bottom: 20px;
           right: 20px;
@@ -361,14 +361,14 @@
           font-weight: 600;
         }
 
-        #interviewace-overlay.hidden {
+        #Blinkora-overlay.hidden {
           display: none !important;
         }
       </style>
       <div class="ia-header">
         <div class="ia-logo">
           <div class="ia-logo-icon">IA</div>
-          <span class="ia-brand">InterviewAce</span>
+          <span class="ia-brand">Blinkora</span>
         </div>
         <button class="ia-close" id="ia-close">×</button>
       </div>

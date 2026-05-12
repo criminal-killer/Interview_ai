@@ -1,4 +1,4 @@
-// InterviewAce Background Service Worker
+// Blinkora Background Service Worker
 // Handles: Speech recognition, AI responses, state management
 
 // State
@@ -10,16 +10,16 @@ let sessionStartTime = null;
 
 // Initialize
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('InterviewAce extension installed');
+  console.log('Blinkora extension installed');
   initializeStorage();
 });
 
 // Initialize storage
 async function initializeStorage() {
-  const result = await chrome.storage.local.get(['interviewAceState', 'weeklyReset']);
-  if (!result.interviewAceState) {
+  const result = await chrome.storage.local.get(['BlinkoraState', 'weeklyReset']);
+  if (!result.BlinkoraState) {
     await chrome.storage.local.set({
-      interviewAceState: {
+      BlinkoraState: {
         resumes: [],
         selectedResume: null,
         jobDetails: { company: '', position: '', description: '' },
@@ -283,8 +283,8 @@ function getGroqApiKey() {
 
 // Get current state
 async function getState() {
-  const result = await chrome.storage.local.get(['interviewAceState']);
-  return result.interviewAceState || {};
+  const result = await chrome.storage.local.get(['BlinkoraState']);
+  return result.BlinkoraState || {};
 }
 
 // Time tracking
@@ -319,8 +319,8 @@ function stopTimeTracking() {
 }
 
 async function updateWeeklyTime(sessionTime) {
-  const result = await chrome.storage.local.get(['interviewAceState']);
-  const state = result.interviewAceState || {};
+  const result = await chrome.storage.local.get(['BlinkoraState']);
+  const state = result.BlinkoraState || {};
 
   // Check weekly reset
   const now = new Date();
@@ -336,7 +336,7 @@ async function updateWeeklyTime(sessionTime) {
   // Add time to weekly total
   state.timeUsedThisWeek += 1000; // 1 second in ms
 
-  await chrome.storage.local.set({ interviewAceState: state });
+  await chrome.storage.local.set({ BlinkoraState: state });
 }
 
 function broadcastTimeUpdate() {

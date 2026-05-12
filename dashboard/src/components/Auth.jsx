@@ -1,50 +1,23 @@
 import { SignIn, SignUp } from '@clerk/clerk-react'
-import { useState } from 'react'
-import { GraduationCap, Check, AlertCircle, Loader2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { GraduationCap, Check } from 'lucide-react'
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true)
-  const [clerkLoaded, setClerkLoaded] = useState(false)
 
   // Check if Clerk key is configured
   const clerkKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
   const hasClerkKey = clerkKey && clerkKey !== 'pk_test_placeholder' && clerkKey.includes('pk_test_')
 
-  // Handle Clerk component mount
-  const handleClerkMount = () => {
-    setClerkLoaded(true)
-  }
-
   if (!hasClerkKey) {
     return (
       <div className="min-h-screen bg-dark flex items-center justify-center p-6">
-        <div className="w-full max-w-md">
-          {/* Logo */}
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <GraduationCap className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold text-white">InterviewAce</h1>
-            <p className="text-slate-400 mt-2">Your AI Interview Assistant</p>
+        <div className="w-full max-w-md text-center">
+          <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <GraduationCap className="w-8 h-8 text-white" />
           </div>
-
-          {/* Error Message */}
-          <div className="bg-card rounded-2xl p-8 border border-border">
-            <div className="flex items-center gap-3 text-amber-400 mb-4">
-              <AlertCircle className="w-6 h-6" />
-              <h2 className="text-lg font-semibold">Configuration Required</h2>
-            </div>
-            <p className="text-slate-400 text-sm mb-4">
-              Clerk authentication is not configured. Please add your Clerk publishable key to the environment variables.
-            </p>
-            <div className="bg-dark rounded-lg p-4 text-xs text-slate-500 font-mono">
-              <p className="text-slate-400 mb-2">Add to your .env file:</p>
-              <code>VITE_CLERK_PUBLISHABLE_KEY=pk_test_your_key_here</code>
-            </div>
-            <p className="text-slate-500 text-xs mt-4">
-              Get your key from <a href="https://dashboard.clerk.com" target="_blank" className="text-primary hover:underline">dashboard.clerk.com</a> → API Keys
-            </p>
-          </div>
+          <h1 className="text-2xl font-bold text-white mb-2">Blinkora</h1>
+          <p className="text-slate-400">Configuration required. Please set VITE_CLERK_PUBLISHABLE_KEY</p>
         </div>
       </div>
     )
@@ -58,17 +31,18 @@ export default function Auth() {
           <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center mx-auto mb-4">
             <GraduationCap className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white">InterviewAce</h1>
+          <h1 className="text-3xl font-bold text-white">Blinkora</h1>
           <p className="text-slate-400 mt-2">Your AI Interview Assistant</p>
         </div>
 
-        {/* Clerk Auth Component */}
+        {/* Clerk Auth */}
         <div className="bg-card rounded-2xl p-8 border border-border">
           {isLogin ? (
             <SignIn
               routing="hash"
               afterSignInUrl="/"
-              signUpUrl="/#signup"
+              signUpUrl="/"
+              signInFallbackRedirectUrl="/"
               appearance={{
                 variables: {
                   colorPrimary: '#8b5cf6',
@@ -77,30 +51,16 @@ export default function Auth() {
                   colorInputText: '#ffffff',
                   colorText: '#ffffff',
                   colorTextSecondary: '#94a3b8',
-                  borderRadius: '8px',
-                  fontFamily: 'Inter, sans-serif'
-                },
-                elements: {
-                  card: 'bg-transparent shadow-none border-none',
-                  headerTitle: 'text-white text-xl font-semibold',
-                  headerSubtitle: 'text-slate-400',
-                  formButtonPrimary: 'bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white font-medium py-3 rounded-lg',
-                  formButtonSecondary: 'bg-dark text-white hover:bg-slate-700',
-                  input: 'bg-dark border border-slate-700 text-white rounded-lg',
-                  inputFocus: 'border-primary',
-                  footerActionLink: 'text-primary hover:text-purple-400',
-                  socialButtonsBlockButton: 'bg-dark border border-slate-700 text-white hover:bg-slate-800',
-                  dividerLine: 'bg-slate-700',
-                  dividerText: 'text-slate-500'
+                  borderRadius: '8px'
                 }
               }}
-              onMount={() => handleClerkMount()}
             />
           ) : (
             <SignUp
               routing="hash"
               afterSignUpUrl="/"
-              signInUrl="/#signin"
+              signInUrl="/"
+              signUpFallbackRedirectUrl="/"
               appearance={{
                 variables: {
                   colorPrimary: '#8b5cf6',
@@ -109,24 +69,9 @@ export default function Auth() {
                   colorInputText: '#ffffff',
                   colorText: '#ffffff',
                   colorTextSecondary: '#94a3b8',
-                  borderRadius: '8px',
-                  fontFamily: 'Inter, sans-serif'
-                },
-                elements: {
-                  card: 'bg-transparent shadow-none border-none',
-                  headerTitle: 'text-white text-xl font-semibold',
-                  headerSubtitle: 'text-slate-400',
-                  formButtonPrimary: 'bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white font-medium py-3 rounded-lg',
-                  formButtonSecondary: 'bg-dark text-white hover:bg-slate-700',
-                  input: 'bg-dark border border-slate-700 text-white rounded-lg',
-                  inputFocus: 'border-primary',
-                  footerActionLink: 'text-primary hover:text-purple-400',
-                  socialButtonsBlockButton: 'bg-dark border border-slate-700 text-white hover:bg-slate-800',
-                  dividerLine: 'bg-slate-700',
-                  dividerText: 'text-slate-500'
+                  borderRadius: '8px'
                 }
               }}
-              onMount={() => handleClerkMount()}
             />
           )}
 

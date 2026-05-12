@@ -15,11 +15,11 @@ export default function Header({ user, onLogout }) {
           {/* Logo */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold">IA</span>
+              <span className="text-white font-bold">B</span>
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white">InterviewAce</h1>
-              <p className="text-xs text-slate-400">Your AI Interview Assistant</p>
+              <h1 className="text-lg font-bold text-white">Blinkora</h1>
+              <p className="text-xs text-slate-400">AI Interview Assistant</p>
             </div>
           </div>
 

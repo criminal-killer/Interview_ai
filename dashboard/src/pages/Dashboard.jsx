@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useUser, useClerk } from '@clerk/clerk-react'
 import Header from '../components/Header'
 import ResumeSection from '../components/ResumeSection'
 import JobSection from '../components/JobSection'
@@ -8,23 +9,24 @@ import { BookOpen, Settings, CreditCard, Download, ChevronRight, Check } from 'l
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://api-beta-three-38.vercel.app'
 
-export default function Dashboard({ clerkUser, onLogout }) {
+export default function Dashboard() {
+  const { user, isLoaded } = useUser()
+  const { signOut } = useClerk()
   const [activeTab, setActiveTab] = useState('setup')
-  const [resumeCount, setResumeCount] = useState(2)
   const [userData, setUserData] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (clerkUser) {
+    if (isLoaded && user) {
       fetchUserData()
     }
-  }, [clerkUser])
+  }, [isLoaded, user])
 
   const fetchUserData = async () => {
     try {
       const response = await fetch(`${API_URL}/api/user/profile`, {
         headers: {
-          'x-clerk-user-id': clerkUser.id
+          'x-clerk-user-id': user.id
         }
       })
 
@@ -32,23 +34,21 @@ export default function Dashboard({ clerkUser, onLogout }) {
         const data = await response.json()
         setUserData(data)
       } else {
-        console.warn('Failed to fetch user data, using Clerk data only')
         // Use Clerk data as fallback
         setUserData({
-          id: clerkUser.id,
-          email: clerkUser.primaryEmailAddress?.emailAddress || '',
-          name: clerkUser.fullName || clerkUser.firstName || 'User',
+          id: user.id,
+          email: user.primaryEmailAddress?.emailAddress || '',
+          name: user.fullName || user.firstName || 'User',
           plan: 'free',
           weeklyTimeUsed: 0
         })
       }
     } catch (error) {
       console.error('Failed to fetch user data:', error)
-      // Use Clerk data as fallback
       setUserData({
-        id: clerkUser.id,
-        email: clerkUser.primaryEmailAddress?.emailAddress || '',
-        name: clerkUser.fullName || clerkUser.firstName || 'User',
+        id: user.id,
+        email: user.primaryEmailAddress?.emailAddress || '',
+        name: user.fullName || user.firstName || 'User',
         plan: 'free',
         weeklyTimeUsed: 0
       })
@@ -57,33 +57,35 @@ export default function Dashboard({ clerkUser, onLogout }) {
     }
   }
 
-  if (loading) {
+  const handleLogout = async () => {
+    await signOut()
+  }
+
+  if (!isLoaded || loading) {
     return (
       <div className="min-h-screen bg-dark flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-400 text-sm">Loading dashboard...</p>
+          <p className="text-slate-400 text-sm">Loading...</p>
         </div>
       </div>
     )
   }
 
   const displayUser = userData || {
-    id: clerkUser?.id,
-    email: clerkUser?.primaryEmailAddress?.emailAddress || '',
-    name: clerkUser?.fullName || clerkUser?.firstName || 'User',
+    id: user?.id,
+    email: user?.primaryEmailAddress?.emailAddress || '',
+    name: user?.fullName || user?.firstName || 'User',
     plan: 'free',
-    weeklyTimeUsed: 0,
-    weeklyLimit: 600000
+    weeklyTimeUsed: 0
   }
 
   const weeklyLimit = displayUser.plan === 'starter' ? 1800000 :
-                      displayUser.plan === 'pro' ? Infinity :
-                      600000 // 10 minutes free
+                      displayUser.plan === 'pro' ? Infinity : 600000
 
   return (
     <div className="min-h-screen bg-dark">
-      <Header user={displayUser} onLogout={onLogout} />
+      <Header user={displayUser} onLogout={handleLogout} />
 
       <main className="max-w-6xl mx-auto px-6 py-8">
         {/* Progress Indicator */}
@@ -152,7 +154,7 @@ export default function Dashboard({ clerkUser, onLogout }) {
             <>
               <div className="lg:col-span-2 space-y-6">
                 <ResumeSection />
-                <JobSection resumeCount={resumeCount} />
+                <JobSection />
               </div>
               <div className="space-y-6">
                 <InstallExtension />
@@ -189,7 +191,7 @@ function InstallExtension() {
     <div className="bg-card rounded-xl p-6 border border-border">
       <h3 className="text-lg font-semibold text-white mb-4">Install Chrome Extension</h3>
       <p className="text-sm text-slate-400 mb-4">
-        Download and install the InterviewAce extension to use during your interviews.
+        Download and install the Blinkora extension to use during your interviews.
       </p>
       <button className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-secondary text-white py-3 rounded-lg font-medium hover:opacity-90 transition-opacity">
         <Download className="w-4 h-4" />

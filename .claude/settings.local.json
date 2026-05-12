@@ -15,7 +15,19 @@
       "Bash(git commit -m 'Add Vercel deployment guide *)",
       "Bash(git commit -m 'Fix admin vercel.json, connect dashboard to API *)",
       "Bash(git commit -m 'Connect admin panel to real API data *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(npm list *)",
+      "Bash(powershell -Command \"\\(Get-Content admin/index.html\\) -replace 'InterviewAce', 'Blinkora' | Set-Content admin/index.html\")",
+      "Bash(powershell -Command \"\\(Get-Content popup/popup.html\\) -replace 'InterviewAce', 'Blinkora' | Set-Content popup/popup.html\")",
+      "Bash(powershell -Command \"\\(Get-Content popup/popup.js\\) -replace 'InterviewAce', 'Blinkora' | Set-Content popup/popup.js\")",
+      "Bash(powershell -Command \"\\(Get-Content dashboard/index.html\\) -replace 'InterviewAce', 'Blinkora' | Set-Content dashboard/index.html\")",
+      "Bash(powershell -Command \"\\(Get-Content api/index.js\\) -replace 'InterviewAce', 'Blinkora' | Set-Content api/index.js\")",
+      "Bash(powershell -Command \"\\(Get-Content api/package.json\\) -replace 'InterviewAce', 'Blinkora' | Set-Content api/package.json\")",
+      "Bash(powershell -Command \"\\(Get-Content background/background.js\\) -replace 'InterviewAce', 'Blinkora' | Set-Content background/background.js\")",
+      "Bash(powershell -Command \"\\(Get-Content content/content.js\\) -replace 'InterviewAce', 'Blinkora' | Set-Content content/content.js\")",
+      "Bash(powershell -Command \"\\(Get-Content lib/storage/chrome-storage.js\\) -replace 'InterviewAce', 'Blinkora' | Set-Content lib/storage/chrome-storage.js\")",
+      "Bash(powershell -Command \"\\(Get-Content lib/ai/openrouter.js\\) -replace 'InterviewAce', 'Blinkora' | Set-Content lib/ai/openrouter.js\")",
+      "Bash(powershell -Command \"\\(Get-Content content/content.css\\) -replace 'InterviewAce', 'Blinkora' | Set-Content content/content.css\")"
     ]
   }
 }

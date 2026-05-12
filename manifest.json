@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "InterviewAce",
+  "name": "Blinkora",
   "version": "1.0.0",
   "description": "AI-powered interview assistant - invisible to interviewers, helpful for candidates",
   "permissions": [
@@ -38,7 +38,7 @@
       "48": "assets/icons/icon48.png",
       "128": "assets/icons/icon128.png"
     },
-    "default_title": "InterviewAce"
+    "default_title": "Blinkora"
   },
   "content_scripts": [
     {

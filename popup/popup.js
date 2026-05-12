@@ -1,4 +1,4 @@
-// InterviewAce Popup - Simple sync UI
+// Blinkora Popup - Simple sync UI
 // Opens dashboard and syncs user data
 
 const DASHBOARD_URL = 'https://blinkora-plum.vercel.app'
@@ -6,7 +6,7 @@ const API_URL = 'https://api-beta-three-38.vercel.app'
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Load state from storage
-  const state = await chrome.storage.local.get(['interviewAceState', 'userData']);
+  const state = await chrome.storage.local.get(['BlinkoraState', 'userData']);
 
   // Update UI based on state
   updateSyncStatus(state);
@@ -55,7 +55,7 @@ async function syncData() {
 
     // Store synced data
     await chrome.storage.local.set({
-      interviewAceState: {
+      BlinkoraState: {
         resumes: profile.resumes || [],
         jobDetails: profile.jobDetails || {},
         settings: profile.settings || {}
@@ -92,7 +92,7 @@ async function updateSyncStatus(state) {
   const planBadge = document.getElementById('planBadge');
 
   const userData = state.userData || {};
-  const interviewState = state.interviewAceState || {};
+  const interviewState = state.BlinkoraState || {};
 
   if (userData.plan) {
     planBadge.textContent = `${userData.plan} Plan`;
