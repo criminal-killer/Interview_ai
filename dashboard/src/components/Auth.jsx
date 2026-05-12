@@ -1,14 +1,19 @@
 import { SignIn, SignUp } from '@clerk/clerk-react'
 import { useState } from 'react'
-import { GraduationCap, Check, AlertCircle } from 'lucide-react'
+import { GraduationCap, Check, AlertCircle, Loader2 } from 'lucide-react'
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true)
-  const [error, setError] = useState(null)
+  const [clerkLoaded, setClerkLoaded] = useState(false)
 
   // Check if Clerk key is configured
   const clerkKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
   const hasClerkKey = clerkKey && clerkKey !== 'pk_test_placeholder' && clerkKey.includes('pk_test_')
+
+  // Handle Clerk component mount
+  const handleClerkMount = () => {
+    setClerkLoaded(true)
+  }
 
   if (!hasClerkKey) {
     return (
@@ -61,10 +66,9 @@ export default function Auth() {
         <div className="bg-card rounded-2xl p-8 border border-border">
           {isLogin ? (
             <SignIn
-              routing="path"
-              path="/sign-in"
-              signUpUrl="/sign-up"
+              routing="hash"
               afterSignInUrl="/"
+              signUpUrl="/#signup"
               appearance={{
                 variables: {
                   colorPrimary: '#8b5cf6',
@@ -73,22 +77,30 @@ export default function Auth() {
                   colorInputText: '#ffffff',
                   colorText: '#ffffff',
                   colorTextSecondary: '#94a3b8',
-                  borderRadius: '8px'
+                  borderRadius: '8px',
+                  fontFamily: 'Inter, sans-serif'
                 },
                 elements: {
-                  card: 'bg-transparent shadow-none',
-                  headerTitle: 'text-white',
+                  card: 'bg-transparent shadow-none border-none',
+                  headerTitle: 'text-white text-xl font-semibold',
                   headerSubtitle: 'text-slate-400',
-                  formButtonPrimary: 'bg-gradient-to-r from-primary to-secondary'
+                  formButtonPrimary: 'bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white font-medium py-3 rounded-lg',
+                  formButtonSecondary: 'bg-dark text-white hover:bg-slate-700',
+                  input: 'bg-dark border border-slate-700 text-white rounded-lg',
+                  inputFocus: 'border-primary',
+                  footerActionLink: 'text-primary hover:text-purple-400',
+                  socialButtonsBlockButton: 'bg-dark border border-slate-700 text-white hover:bg-slate-800',
+                  dividerLine: 'bg-slate-700',
+                  dividerText: 'text-slate-500'
                 }
               }}
+              onMount={() => handleClerkMount()}
             />
           ) : (
             <SignUp
-              routing="path"
-              path="/sign-up"
-              signInUrl="/sign-in"
+              routing="hash"
               afterSignUpUrl="/"
+              signInUrl="/#signin"
               appearance={{
                 variables: {
                   colorPrimary: '#8b5cf6',
@@ -97,15 +109,24 @@ export default function Auth() {
                   colorInputText: '#ffffff',
                   colorText: '#ffffff',
                   colorTextSecondary: '#94a3b8',
-                  borderRadius: '8px'
+                  borderRadius: '8px',
+                  fontFamily: 'Inter, sans-serif'
                 },
                 elements: {
-                  card: 'bg-transparent shadow-none',
-                  headerTitle: 'text-white',
+                  card: 'bg-transparent shadow-none border-none',
+                  headerTitle: 'text-white text-xl font-semibold',
                   headerSubtitle: 'text-slate-400',
-                  formButtonPrimary: 'bg-gradient-to-r from-primary to-secondary'
+                  formButtonPrimary: 'bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white font-medium py-3 rounded-lg',
+                  formButtonSecondary: 'bg-dark text-white hover:bg-slate-700',
+                  input: 'bg-dark border border-slate-700 text-white rounded-lg',
+                  inputFocus: 'border-primary',
+                  footerActionLink: 'text-primary hover:text-purple-400',
+                  socialButtonsBlockButton: 'bg-dark border border-slate-700 text-white hover:bg-slate-800',
+                  dividerLine: 'bg-slate-700',
+                  dividerText: 'text-slate-500'
                 }
               }}
+              onMount={() => handleClerkMount()}
             />
           )}
 
