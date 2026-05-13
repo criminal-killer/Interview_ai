@@ -33,19 +33,20 @@ async function syncData() {
   statusEl.classList.remove('synced');
 
   try {
-    // Get auth token from storage
+    // Get Clerk user ID from storage
     const state = await chrome.storage.local.get(['userData']);
     const userData = state.userData || {};
 
-    if (!userData.token) {
+    if (!userData.id) {
       statusEl.textContent = 'Not signed in - Open dashboard to login';
       return;
     }
 
-    // Fetch user data from backend API
+    // Fetch user data from backend API using x-clerk-user-id header
     const response = await fetch(`${API_URL}/api/user/profile`, {
       headers: {
-        'Authorization': `Bearer ${userData.token}`
+        'Content-Type': 'application/json',
+        'x-clerk-user-id': userData.id
       }
     });
 
@@ -62,7 +63,7 @@ async function syncData() {
       },
       userData: {
         ...userData,
-        plan: profile.subscriptionTier,
+        plan: profile.plan,
         lastSync: Date.now()
       }
     });
@@ -73,7 +74,7 @@ async function syncData() {
     // Update plan badge
     const planBadge = document.getElementById('planBadge')
     if (planBadge) {
-      planBadge.textContent = `${profile.subscriptionTier || 'Free'} Plan`
+      planBadge.textContent = `${profile.plan || 'Free'} Plan`
     }
 
     setTimeout(() => {
@@ -108,7 +109,7 @@ async function updateSyncStatus(state) {
     statusEl.classList.add('synced');
   }
 
-  if (!userData.token) {
+  if (!userData.id) {
     statusEl.textContent = 'Click to sync';
   }
 }
