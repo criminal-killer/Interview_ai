@@ -38,6 +38,14 @@ app.delete('/api/resumes/:id', require('./routes/clerk').deleteResume);
 app.get('/api/jobs', require('./routes/clerk').getJobs);
 app.post('/api/jobs', require('./routes/clerk').addJob);
 
+// Session routes (NEW)
+app.post('/api/sessions', require('./routes/clerk').createSession);
+app.get('/api/sessions/active', require('./routes/clerk').getActiveSession);
+app.post('/api/sessions/start', require('./routes/clerk').startSession);
+app.post('/api/sessions/message', require('./routes/clerk').addMessage);
+app.post('/api/sessions/end', require('./routes/clerk').endSession);
+app.get('/api/sessions', require('./routes/clerk').getSessions);
+
 // AI routes
 app.post('/api/ai/answer', require('./routes/ai').answer);
 app.post('/api/ai/code-solution', require('./routes/ai').codeSolution);
@@ -48,10 +56,6 @@ app.post('/api/billing/webhook', require('./routes/billing').webhook);
 
 // Referral routes
 app.get('/api/referrals', require('./routes/clerk').getReferrals);
-
-// Sessions routes
-app.post('/api/sessions', require('./routes/clerk').saveSession);
-app.get('/api/sessions', require('./routes/clerk').getSessions);
 
 // Admin routes (use x-clerk-user-id header)
 app.get('/api/admin/stats', require('./routes/admin').stats);

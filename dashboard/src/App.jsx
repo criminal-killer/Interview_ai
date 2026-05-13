@@ -7,6 +7,7 @@ import ResumesPage from './pages/ResumesPage'
 import JobsPage from './pages/JobsPage'
 import SettingsPage from './pages/SettingsPage'
 import BillingPage from './pages/BillingPage'
+import SessionPage from './pages/SessionPage'
 
 function App() {
   const { isLoaded, isSignedIn } = useAuth()
@@ -40,6 +41,8 @@ function App() {
         return <ResumesPage {...props} />
       case 'jobs':
         return <JobsPage {...props} />
+      case 'session':
+        return <SessionPage {...props} />
       case 'settings':
         return <SettingsPage {...props} />
       case 'billing':

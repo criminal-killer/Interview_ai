@@ -10,7 +10,8 @@ import {
   Menu,
   X,
   Crown,
-  Loader2
+  Loader2,
+  Play
 } from 'lucide-react'
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://api-beta-three-38.vercel.app'
@@ -50,6 +51,7 @@ export default function Layout({ children }) {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'resumes', label: 'Resumes', icon: FileText },
     { id: 'jobs', label: 'Job Details', icon: Briefcase },
+    { id: 'session', label: 'Interview', icon: Play },
     { id: 'settings', label: 'Settings', icon: Settings },
     { id: 'billing', label: 'Billing', icon: CreditCard },
   ]

@@ -2,6 +2,31 @@
 const crypto = require('crypto');
 const { usersStore } = require('../store');
 
+// Plan limits
+const RESUME_LIMITS = {
+  free: 2,
+  starter: 5,
+  pro: 12,
+  enterprise: Infinity
+};
+
+const TIME_LIMITS = {
+  free: 600000,      // 10 minutes
+  starter: 1800000,  // 30 minutes
+  pro: Infinity,     // Unlimited
+  enterprise: Infinity
+};
+
+// Helper function to find user by Clerk ID
+function findUserByClerkId(clerkUserId) {
+  for (const [email, user] of usersStore) {
+    if (user.id === clerkUserId) {
+      return user;
+    }
+  }
+  return null;
+}
+
 module.exports = {
   // Handle Clerk webhooks (user creation, deletion, etc.)
   webhook: async (req, res) => {
@@ -43,7 +68,6 @@ module.exports = {
 
           // Check if user already exists
           if (usersStore.has(email)) {
-            // Update existing user with Clerk ID
             const user = usersStore.get(email);
             user.id = id;
             return res.json({ success: true, message: 'User updated' });
@@ -58,6 +82,7 @@ module.exports = {
             name,
             plan: 'free',
             weeklyTimeUsed: 0,
+            weeklyLimit: 600000,
             referralCode: userReferralCode,
             referredBy: null,
             referralEarnings: 0,
@@ -69,7 +94,7 @@ module.exports = {
               stealthMode: true,
               autoDetect: true,
               aiProvider: 'groq',
-              customApiKey: ''
+              speechRate: 0.9
             },
             createdAt: new Date().toISOString()
           });
@@ -80,7 +105,6 @@ module.exports = {
 
         case 'user.deleted': {
           const { id } = data;
-          // Find and delete user by Clerk ID
           for (const [email, user] of usersStore) {
             if (user.id === id) {
               usersStore.delete(email);
@@ -108,14 +132,11 @@ module.exports = {
         return res.status(401).json({ error: 'Unauthorized', isAdmin: false });
       }
 
-      // Find user by Clerk ID
       const user = findUserByClerkId(clerkUserId);
-
       if (!user) {
         return res.status(404).json({ error: 'User not found', isAdmin: false });
       }
 
-      // Check if user is admin
       const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase());
       const isAdmin = adminEmails.includes(user.email.toLowerCase()) || user.plan === 'enterprise';
 
@@ -126,7 +147,7 @@ module.exports = {
     }
   },
 
-  // Get user profile by Clerk ID (for frontend use)
+  // Get user profile
   getProfile: async (req, res) => {
     try {
       const clerkUserId = req.headers['x-clerk-user-id'];
@@ -134,25 +155,28 @@ module.exports = {
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
-      // Find user by Clerk ID
       const user = findUserByClerkId(clerkUserId);
-
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
+
+      const plan = user.plan || 'free';
+      const resumeLimit = RESUME_LIMITS[plan] || 2;
+      const timeLimit = TIME_LIMITS[plan] || 600000;
 
       res.json({
         id: user.id,
         email: user.email,
         name: user.name,
-        plan: user.plan || 'free',
+        plan: plan,
         weeklyTimeUsed: user.weeklyTimeUsed || 0,
-        weeklyLimit: user.plan === 'starter' ? 1800000 : user.plan === 'pro' ? Infinity : 600000,
-        referralCode: user.referralCode,
-        referralEarnings: user.referralEarnings || 0,
+        weeklyLimit: timeLimit,
+        resumeLimit: resumeLimit,
         resumes: user.resumes || [],
         jobDetails: user.jobDetails || {},
-        settings: user.settings || {}
+        settings: user.settings || {},
+        referralCode: user.referralCode,
+        referralEarnings: user.referralEarnings || 0
       });
     } catch (error) {
       console.error('Get profile error:', error);
@@ -175,7 +199,6 @@ module.exports = {
 
       const updates = req.body;
 
-      // Apply updates
       if (updates.name) user.name = updates.name;
       if (updates.jobDetails) user.jobDetails = { ...user.jobDetails, ...updates.jobDetails };
       if (updates.settings) user.settings = { ...user.settings, ...updates.settings };
@@ -201,13 +224,20 @@ module.exports = {
         return res.status(404).json({ error: 'User not found' });
       }
 
-      res.json({ resumes: user.resumes || [] });
+      const plan = user.plan || 'free';
+      const resumeLimit = RESUME_LIMITS[plan] || 2;
+
+      res.json({
+        resumes: user.resumes || [],
+        resumeLimit: resumeLimit,
+        canAddMore: (user.resumes || []).length < resumeLimit || resumeLimit === Infinity
+      });
     } catch (error) {
       res.status(500).json({ error: 'Failed to get resumes' });
     }
   },
 
-  // Add resume
+  // Add resume (with plan limit)
   addResume: async (req, res) => {
     try {
       const clerkUserId = req.headers['x-clerk-user-id'];
@@ -220,20 +250,36 @@ module.exports = {
         return res.status(404).json({ error: 'User not found' });
       }
 
-      const { name, content, label } = req.body;
+      const { name, content } = req.body;
+      const plan = user.plan || 'free';
+      const resumeLimit = RESUME_LIMITS[plan] || 2;
+      const currentCount = (user.resumes || []).length;
+
+      // Check limit
+      if (currentCount >= resumeLimit && resumeLimit !== Infinity) {
+        return res.status(403).json({
+          error: 'Resume limit reached',
+          limit: resumeLimit,
+          current: currentCount,
+          upgrade: true
+        });
+      }
 
       const resume = {
         id: crypto.randomUUID(),
         name: name || 'Resume',
         content: content || '',
-        label: label || 'Default',
         createdAt: new Date().toISOString()
       };
 
       user.resumes = user.resumes || [];
       user.resumes.push(resume);
 
-      res.status(201).json({ resume });
+      res.status(201).json({
+        resume,
+        resumeLimit,
+        canAddMore: (user.resumes.length < resumeLimit) || resumeLimit === Infinity
+      });
     } catch (error) {
       res.status(500).json({ error: 'Failed to add resume' });
     }
@@ -303,6 +349,210 @@ module.exports = {
     }
   },
 
+  // Create session
+  createSession: async (req, res) => {
+    try {
+      const clerkUserId = req.headers['x-clerk-user-id'];
+      if (!clerkUserId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const user = findUserByClerkId(clerkUserId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const { resumeId, interviewDuration } = req.body;
+
+      // Get selected resume
+      const selectedResume = (user.resumes || []).find(r => r.id === resumeId);
+      if (!selectedResume) {
+        return res.status(400).json({ error: 'Please select a resume' });
+      }
+
+      // Check time limit
+      const plan = user.plan || 'free';
+      const timeLimit = TIME_LIMITS[plan] || 600000;
+      const timeUsed = user.weeklyTimeUsed || 0;
+
+      if (timeLimit !== Infinity && timeUsed >= timeLimit) {
+        return res.status(403).json({
+          error: 'Weekly time limit reached',
+          upgrade: true,
+          timeUsed,
+          timeLimit
+        });
+      }
+
+      // Create session
+      const session = {
+        id: crypto.randomUUID(),
+        resumeId: selectedResume.id,
+        resumeName: selectedResume.name,
+        resumeContent: selectedResume.content,
+        jobDetails: user.jobDetails || null,
+        interviewDuration: interviewDuration || null,
+        status: 'waiting', // waiting, active, completed
+        messages: [],
+        startTime: null,
+        endTime: null,
+        createdAt: new Date().toISOString()
+      };
+
+      user.sessions = user.sessions || [];
+      user.sessions.push(session);
+
+      res.status(201).json({ session });
+    } catch (error) {
+      console.error('Create session error:', error);
+      res.status(500).json({ error: 'Failed to create session' });
+    }
+  },
+
+  // Get active session
+  getActiveSession: async (req, res) => {
+    try {
+      const clerkUserId = req.headers['x-clerk-user-id'];
+      if (!clerkUserId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const user = findUserByClerkId(clerkUserId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Get most recent session that's not completed
+      const activeSession = (user.sessions || [])
+        .filter(s => s.status !== 'completed')
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+
+      if (!activeSession) {
+        return res.json({ session: null });
+      }
+
+      res.json({ session: activeSession });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to get session' });
+    }
+  },
+
+  // Start session (when interview begins)
+  startSession: async (req, res) => {
+    try {
+      const clerkUserId = req.headers['x-clerk-user-id'];
+      if (!clerkUserId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const user = findUserByClerkId(clerkUserId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const { sessionId } = req.body;
+
+      const session = (user.sessions || []).find(s => s.id === sessionId);
+      if (!session) {
+        return res.status(404).json({ error: 'Session not found' });
+      }
+
+      session.status = 'active';
+      session.startTime = new Date().toISOString();
+
+      res.json({ session });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to start session' });
+    }
+  },
+
+  // Add message to session
+  addMessage: async (req, res) => {
+    try {
+      const clerkUserId = req.headers['x-clerk-user-id'];
+      if (!clerkUserId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const user = findUserByClerkId(clerkUserId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const { sessionId, question, answer } = req.body;
+
+      const session = (user.sessions || []).find(s => s.id === sessionId);
+      if (!session) {
+        return res.status(404).json({ error: 'Session not found' });
+      }
+
+      const message = {
+        id: crypto.randomUUID(),
+        question: question || '',
+        answer: answer || '',
+        timestamp: new Date().toISOString()
+      };
+
+      session.messages = session.messages || [];
+      session.messages.push(message);
+
+      // Update time used (estimate 5 seconds per question)
+      user.weeklyTimeUsed = (user.weeklyTimeUsed || 0) + 5000;
+
+      res.json({ message });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to add message' });
+    }
+  },
+
+  // End session
+  endSession: async (req, res) => {
+    try {
+      const clerkUserId = req.headers['x-clerk-user-id'];
+      if (!clerkUserId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const user = findUserByClerkId(clerkUserId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const { sessionId } = req.body;
+
+      const session = (user.sessions || []).find(s => s.id === sessionId);
+      if (!session) {
+        return res.status(404).json({ error: 'Session not found' });
+      }
+
+      session.status = 'completed';
+      session.endTime = new Date().toISOString();
+
+      res.json({ session });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to end session' });
+    }
+  },
+
+  // Get sessions history
+  getSessions: async (req, res) => {
+    try {
+      const clerkUserId = req.headers['x-clerk-user-id'];
+      if (!clerkUserId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const user = findUserByClerkId(clerkUserId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      res.json({ sessions: user.sessions || [] });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to get sessions' });
+    }
+  },
+
   // Get referrals
   getReferrals: async (req, res) => {
     try {
@@ -324,66 +574,5 @@ module.exports = {
     } catch (error) {
       res.status(500).json({ error: 'Failed to get referrals' });
     }
-  },
-
-  // Save session
-  saveSession: async (req, res) => {
-    try {
-      const clerkUserId = req.headers['x-clerk-user-id'];
-      if (!clerkUserId) {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
-
-      const user = findUserByClerkId(clerkUserId);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      const { platform, duration, questionsAnswered } = req.body;
-
-      const session = {
-        id: crypto.randomUUID(),
-        platform,
-        duration,
-        questionsAnswered,
-        createdAt: new Date().toISOString()
-      };
-
-      // Update weekly time
-      user.weeklyTimeUsed = (user.weeklyTimeUsed || 0) + (duration || 0);
-
-      res.status(201).json({ sessionId: session.id });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to save session' });
-    }
-  },
-
-  // Get sessions
-  getSessions: async (req, res) => {
-    try {
-      const clerkUserId = req.headers['x-clerk-user-id'];
-      if (!clerkUserId) {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
-
-      const user = findUserByClerkId(clerkUserId);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      res.json({ sessions: user.sessions || [] });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to get sessions' });
-    }
   }
 };
-
-// Helper function to find user by Clerk ID
-function findUserByClerkId(clerkUserId) {
-  for (const [email, user] of usersStore) {
-    if (user.id === clerkUserId) {
-      return user;
-    }
-  }
-  return null;
-}

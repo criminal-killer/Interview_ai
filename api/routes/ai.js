@@ -1,4 +1,4 @@
-// AI routes - Groq integration with Clerk auth
+// AI routes - Groq integration with session context
 const { usersStore } = require('../store');
 
 // Find user by Clerk ID
@@ -12,25 +12,51 @@ function findUserByClerkId(clerkUserId) {
   return null;
 }
 
+// Find active session for user
+function getActiveSession(user) {
+  if (!user.sessions) return null;
+  return user.sessions.find(s => s.status === 'active' || s.status === 'waiting');
+}
+
 module.exports = {
-  // Generate answer
+  // Generate answer with session context
   answer: async (req, res) => {
     try {
       const clerkUserId = req.headers['x-clerk-user-id'];
       const user = findUserByClerkId(clerkUserId);
 
       if (!user) {
-        return res.status(401).json({ error: 'Unauthorized - user not found. Please sign in again.' });
+        return res.status(401).json({ error: 'Unauthorized - user not found' });
       }
 
-      const { question, context } = req.body;
+      const { question, sessionId } = req.body;
 
       if (!question) {
         return res.status(400).json({ error: 'Question required' });
       }
 
+      // Get session context if provided
+      let resumeContent = '';
+      let jobDetails = null;
+
+      if (sessionId) {
+        const session = (user.sessions || []).find(s => s.id === sessionId);
+        if (session) {
+          resumeContent = session.resumeContent || '';
+          jobDetails = session.jobDetails || null;
+        }
+      }
+
+      // Fallback to user's default resume/job if no session
+      if (!resumeContent && user.resumes?.[0]) {
+        resumeContent = user.resumes[0].content;
+      }
+      if (!jobDetails && user.jobDetails) {
+        jobDetails = user.jobDetails;
+      }
+
       // Check time limit
-      const limits = { free: 600000, starter: 1800000, pro: Infinity };
+      const limits = { free: 600000, starter: 1800000, pro: Infinity, enterprise: Infinity };
       const limit = limits[user.plan] || limits.free;
 
       if (limit !== Infinity && (user.weeklyTimeUsed || 0) >= limit) {
@@ -42,9 +68,9 @@ module.exports = {
       }
 
       // Build prompt
-      const prompt = buildPrompt(question, context || {
-        resume: user.resumes?.[0],
-        jobDetails: user.jobDetails
+      const prompt = buildPrompt(question, {
+        resume: resumeContent,
+        jobDetails: jobDetails
       });
 
       // Call Groq API
@@ -61,9 +87,15 @@ module.exports = {
         },
         body: JSON.stringify({
           model: 'llama-3.3-70b-versatile',
-          messages: [{ role: 'user', content: prompt }],
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a helpful interview assistant. Keep responses SHORT (1-2 sentences), conversational, and natural. Like you are thinking and speaking aloud, NOT reading from a script.'
+            },
+            { role: 'user', content: prompt }
+          ],
           temperature: 0.7,
-          max_tokens: 300
+          max_tokens: 150
         })
       });
 
@@ -76,11 +108,25 @@ module.exports = {
       const data = await response.json();
       let answer = data.choices[0].message.content.trim();
 
-      // Clean answer
+      // Clean answer - remove quotes and make it conversational
       answer = answer.replace(/^[""]|[""]$/g, '');
 
-      // Update time used
-      user.weeklyTimeUsed = (user.weeklyTimeUsed || 0) + 5000; // ~5 sec per answer
+      // Add to session messages if session provided
+      if (sessionId) {
+        const session = (user.sessions || []).find(s => s.id === sessionId);
+        if (session) {
+          session.messages = session.messages || [];
+          session.messages.push({
+            id: crypto.randomUUID(),
+            question,
+            answer,
+            timestamp: new Date().toISOString()
+          });
+        }
+      }
+
+      // Update time used (estimate 5 seconds per answer)
+      user.weeklyTimeUsed = (user.weeklyTimeUsed || 0) + 5000;
 
       res.json({
         answer,
@@ -104,19 +150,18 @@ module.exports = {
 
       const { code, language, problem } = req.body;
 
-      const prompt = `You are a coding interview assistant. The candidate is being asked to solve a coding problem.
+      const prompt = `You are a coding interview assistant.
 
 Problem: ${problem || 'Not specified'}
 Language: ${language || 'Not specified'}
 Code shown: ${code || 'No code shown yet'}
 
-Provide a helpful response with:
-1. Approach explanation (1-2 sentences)
-2. Code solution if needed
-3. Complexity analysis
+Provide:
+1. Brief approach (1 sentence)
+2. Simple solution
+3. Time complexity
 
-Keep responses concise and focused on helping the candidate understand the solution.
-`;
+Keep it concise and conversational.`;
 
       const groqApiKey = process.env.GROQ_API_KEY;
       if (!groqApiKey) {
@@ -133,7 +178,7 @@ Keep responses concise and focused on helping the candidate understand the solut
           model: 'llama-3.3-70b-versatile',
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.5,
-          max_tokens: 500
+          max_tokens: 400
         })
       });
 
@@ -154,30 +199,24 @@ Keep responses concise and focused on helping the candidate understand the solut
 
 // Build prompt function
 function buildPrompt(question, context) {
-  let prompt = `You are a helpful interview assistant helping someone during a job interview.
-
-RULES:
-- Keep answers SHORT - 2 to 3 sentences maximum
-- Sound natural, like you're thinking and speaking
-- Use simple words, avoid complex jargon
-- Don't sound like you're reading a script
-
-`;
+  let prompt = `Interview question: "${question}"\n\n`;
 
   if (context?.jobDetails) {
-    prompt += `\nPOSITION: ${context.jobDetails.position || 'N/A'}\n`;
-    prompt += `COMPANY: ${context.jobDetails.company || 'N/A'}\n`;
+    prompt += `Position: ${context.jobDetails.position || 'Not specified'}\n`;
+    prompt += `Company: ${context.jobDetails.company || 'Not specified'}\n`;
     if (context.jobDetails.description) {
-      prompt += `JOB DESCRIPTION: ${context.jobDetails.description.substring(0, 500)}...\n`;
+      prompt += `Job context: ${context.jobDetails.description.substring(0, 300)}\n`;
     }
   }
 
-  if (context?.resume?.content) {
-    prompt += `\nCANDIDATE BACKGROUND:\n${context.resume.content.substring(0, 1000)}...\n`;
+  if (context?.resume) {
+    prompt += `\nMy background: ${context.resume.substring(0, 500)}\n`;
   }
 
-  prompt += `\nINTERVIEW QUESTION: "${question}"\n\n`;
-  prompt += `Give a natural, conversational answer (2-3 sentences max):`;
+  prompt += `\nGive me a brief conversational answer (1-2 sentences, like I am thinking and speaking, not reading):`;
 
   return prompt;
 }
+
+// Need crypto for message ID
+const crypto = require('crypto');

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useUser } from '@clerk/clerk-react'
-import { FileText, Plus, Trash2, Upload, Check } from 'lucide-react'
+import { FileText, Plus, Trash2, AlertCircle } from 'lucide-react'
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://api-beta-three-38.vercel.app'
 
@@ -9,14 +9,18 @@ export default function ResumesPage({ userData, setUserData, activeTab }) {
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({ name: '', content: '' })
+  const [error, setError] = useState('')
 
   const resumes = userData?.resumes || []
+  const resumeLimit = userData?.resumeLimit || 2
+  const canAddMore = resumes.length < resumeLimit || resumeLimit === Infinity
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!formData.name || !formData.content) return
 
     setLoading(true)
+    setError('')
     try {
       const response = await fetch(`${API_URL}/api/resumes`, {
         method: 'POST',
@@ -27,20 +31,30 @@ export default function ResumesPage({ userData, setUserData, activeTab }) {
         body: JSON.stringify(formData)
       })
 
-      if (response.ok) {
-        // Refresh user data
-        const profileRes = await fetch(`${API_URL}/api/user/profile`, {
-          headers: { 'x-clerk-user-id': user.id }
-        })
-        if (profileRes.ok) {
-          const data = await profileRes.json()
-          setUserData(data)
+      const data = await response.json()
+
+      if (!response.ok) {
+        if (response.status === 403 && data.upgrade) {
+          setError(`Resume limit reached (${resumes.length}/${resumeLimit}). Upgrade to add more.`)
+        } else {
+          setError(data.error || 'Failed to add resume')
         }
-        setFormData({ name: '', content: '' })
-        setShowForm(false)
+        return
       }
+
+      // Refresh user data
+      const profileRes = await fetch(`${API_URL}/api/user/profile`, {
+        headers: { 'x-clerk-user-id': user.id }
+      })
+      if (profileRes.ok) {
+        const profileData = await profileRes.json()
+        setUserData(profileData)
+      }
+      setFormData({ name: '', content: '' })
+      setShowForm(false)
     } catch (error) {
       console.error('Failed to add resume:', error)
+      setError('Failed to add resume')
     } finally {
       setLoading(false)
     }
@@ -73,19 +87,34 @@ export default function ResumesPage({ userData, setUserData, activeTab }) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Resumes</h1>
-          <p className="text-slate-400 mt-1">Manage your resumes for personalized answers</p>
+          <p className="text-slate-400 mt-1">
+            {resumeLimit === Infinity
+              ? 'Unlimited resumes'
+              : `${resumes.length}/${resumeLimit} resumes used`
+            }
+          </p>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Add Resume
-        </button>
+        {canAddMore && (
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add Resume
+          </button>
+        )}
       </div>
 
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-red-400" />
+          <p className="text-red-400">{error}</p>
+        </div>
+      )}
+
       {/* Add Form */}
-      {showForm && (
+      {showForm && canAddMore && (
         <div className="bg-card rounded-xl p-6 border border-border">
           <h3 className="text-lg font-semibold text-white mb-4">Add New Resume</h3>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -120,13 +149,30 @@ export default function ResumesPage({ userData, setUserData, activeTab }) {
               </button>
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={() => { setShowForm(false); setError('') }}
                 className="px-6 py-2 bg-border text-white rounded-lg hover:bg-slate-600 transition-colors"
               >
                 Cancel
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Resume Limit Reached */}
+      {!canAddMore && (
+        <div className="bg-amber-500/20 border border-amber-500/50 rounded-xl p-6 text-center">
+          <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-3" />
+          <h3 className="text-lg font-semibold text-white mb-2">Resume Limit Reached</h3>
+          <p className="text-slate-400 mb-4">
+            Your free plan allows {resumeLimit} resumes. Upgrade to add more.
+          </p>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: 'billing' }))}
+            className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+          >
+            Upgrade Plan
+          </button>
         </div>
       )}
 
@@ -138,13 +184,15 @@ export default function ResumesPage({ userData, setUserData, activeTab }) {
           </div>
           <h3 className="text-xl font-semibold text-white mb-2">No resumes yet</h3>
           <p className="text-slate-400 mb-6">Add your resume to get personalized interview answers</p>
-          <button
-            onClick={() => setShowForm(true)}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add Your First Resume
-          </button>
+          {canAddMore && (
+            <button
+              onClick={() => setShowForm(true)}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add Your First Resume
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
