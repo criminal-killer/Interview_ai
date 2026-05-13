@@ -13,8 +13,7 @@ import {
   Loader2,
   Play
 } from 'lucide-react'
-
-const API_URL = import.meta.env.VITE_API_URL || 'https://api-beta-three-38.vercel.app'
+import { API } from './config'
 
 export default function Layout({ children }) {
   const { user, isLoaded } = useUser()
@@ -32,7 +31,7 @@ export default function Layout({ children }) {
 
   const fetchUserData = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/user/profile`, {
+      const response = await fetch(`${API.url}${API.endpoints.profile}`, {
         headers: { 'x-clerk-user-id': user.id }
       })
 

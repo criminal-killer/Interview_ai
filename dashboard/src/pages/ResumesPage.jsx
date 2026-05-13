@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { useUser } from '@clerk/clerk-react'
 import { FileText, Plus, Trash2, AlertCircle } from 'lucide-react'
-
-const API_URL = import.meta.env.VITE_API_URL || 'https://api-beta-three-38.vercel.app'
+import { API } from '../config'
 
 export default function ResumesPage({ userData, setUserData, activeTab }) {
   const { user } = useUser()
@@ -22,7 +21,7 @@ export default function ResumesPage({ userData, setUserData, activeTab }) {
     setLoading(true)
     setError('')
     try {
-      const response = await fetch(`${API_URL}/api/resumes`, {
+      const response = await fetch(`${API.url}${API.endpoints.resumes}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -43,7 +42,7 @@ export default function ResumesPage({ userData, setUserData, activeTab }) {
       }
 
       // Refresh user data
-      const profileRes = await fetch(`${API_URL}/api/user/profile`, {
+      const profileRes = await fetch(`${API.url}${API.endpoints.profile}`, {
         headers: { 'x-clerk-user-id': user.id }
       })
       if (profileRes.ok) {
@@ -64,13 +63,13 @@ export default function ResumesPage({ userData, setUserData, activeTab }) {
     if (!confirm('Delete this resume?')) return
 
     try {
-      await fetch(`${API_URL}/api/resumes/${id}`, {
+      await fetch(`${API.url}/api/resumes/${id}`, {
         method: 'DELETE',
         headers: { 'x-clerk-user-id': user.id }
       })
 
       // Refresh user data
-      const profileRes = await fetch(`${API_URL}/api/user/profile`, {
+      const profileRes = await fetch(`${API.url}${API.endpoints.profile}`, {
         headers: { 'x-clerk-user-id': user.id }
       })
       if (profileRes.ok) {

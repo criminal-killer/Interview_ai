@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { useUser } from '@clerk/clerk-react'
 import { Briefcase, Building, Save, Check } from 'lucide-react'
-
-const API_URL = import.meta.env.VITE_API_URL || 'https://api-beta-three-38.vercel.app'
+import { API } from '../config'
 
 export default function JobsPage({ userData, setUserData }) {
   const { user } = useUser()
@@ -19,7 +18,7 @@ export default function JobsPage({ userData, setUserData }) {
     setLoading(true)
 
     try {
-      const response = await fetch(`${API_URL}/api/jobs`, {
+      const response = await fetch(`${API.url}${API.endpoints.jobs}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -30,7 +29,7 @@ export default function JobsPage({ userData, setUserData }) {
 
       if (response.ok) {
         // Refresh user data
-        const profileRes = await fetch(`${API_URL}/api/user/profile`, {
+        const profileRes = await fetch(`${API.url}${API.endpoints.profile}`, {
           headers: { 'x-clerk-user-id': user.id }
         })
         if (profileRes.ok) {

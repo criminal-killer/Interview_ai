@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useUser } from '@clerk/clerk-react'
 import { Play, Clock, FileText, Briefcase, Mic, MicOff, Send, X, Check, Loader2, AlertCircle } from 'lucide-react'
-
-const API_URL = import.meta.env.VITE_API_URL || 'https://api-beta-three-38.vercel.app'
+import { API } from '../config'
 
 export default function SessionPage({ userData, setUserData }) {
   const { user } = useUser()
@@ -29,7 +28,7 @@ export default function SessionPage({ userData, setUserData }) {
 
   const fetchActiveSession = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/sessions/active`, {
+      const res = await fetch(`${API.url}${API.endpoints.sessionsActive}`, {
         headers: { 'x-clerk-user-id': user.id }
       })
       const data = await res.json()
@@ -55,7 +54,7 @@ export default function SessionPage({ userData, setUserData }) {
 
     setLoading(true)
     try {
-      const res = await fetch(`${API_URL}/api/sessions`, {
+      const res = await fetch(`${API.url}${API.endpoints.sessions}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -89,7 +88,7 @@ export default function SessionPage({ userData, setUserData }) {
     if (!activeSession) return
 
     try {
-      const res = await fetch(`${API_URL}/api/sessions/start`, {
+      const res = await fetch(`${API.url}${API.endpoints.sessionsStart}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -157,7 +156,7 @@ export default function SessionPage({ userData, setUserData }) {
     setCurrentQuestion(question)
 
     try {
-      const res = await fetch(`${API_URL}/api/ai/answer`, {
+      const res = await fetch(`${API.url}${API.endpoints.aiAnswer}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -220,7 +219,7 @@ export default function SessionPage({ userData, setUserData }) {
     if (!activeSession) return
 
     try {
-      await fetch(`${API_URL}/api/sessions/end`, {
+      await fetch(`${API.url}${API.endpoints.sessionsEnd}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
