@@ -14,6 +14,15 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Root handler - API info
+app.get('/', (req, res) => {
+  res.json({
+    name: 'Blinkora API',
+    status: 'running',
+    endpoints: '/api/health, /api/user/profile, /api/resumes, etc.'
+  });
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
