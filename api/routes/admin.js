@@ -1,29 +1,71 @@
-// Admin routes - with Clerk auth verification
-const { usersStore } = require('../store');
+// Admin routes - with Turso DB and Clerk auth verification
+const { createClient } = require('@libsql/client');
 
-// Verify admin access
-function verifyAdmin(clerkUserId) {
+const turso = process.env.TURSO_URL ? createClient({
+  url: process.env.TURSO_URL,
+  authToken: process.env.TURSO_AUTH_TOKEN
+}) : null;
+
+// Verify admin access - checks against ADMIN_EMAILS from env
+async function verifyAdmin(clerkUserId, userEmail) {
   if (!clerkUserId) return { isAdmin: false, error: 'No user ID' };
 
-  const user = findUserByClerkId(clerkUserId);
-  if (!user) {
-    return { isAdmin: false, error: 'User not found' };
+  // Check if user's email is in ADMIN_EMAILS
+  const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase());
+  const emailToCheck = (userEmail || '').toLowerCase();
+
+  // Allow if email is in ADMIN_EMAILS
+  if (adminEmails.includes(emailToCheck)) {
+    return { isAdmin: true, email: userEmail };
   }
 
-  // Check if user is admin by email or plan
-  const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase());
-  const isAdmin = adminEmails.includes(user.email?.toLowerCase()) || user.plan === 'enterprise';
-
-  return { isAdmin, user };
-}
-
-function findUserByClerkId(clerkUserId) {
-  for (const [email, user] of usersStore) {
-    if (user.id === clerkUserId) {
-      return user;
+  // Also check in database if user exists and has enterprise plan
+  if (turso) {
+    try {
+      const result = await turso.execute({
+        sql: 'SELECT * FROM users WHERE id = ?',
+        args: [clerkUserId]
+      });
+      if (result.rows[0] && result.rows[0].plan === 'enterprise') {
+        return { isAdmin: true, user: result.rows[0] };
+      }
+    } catch (e) {
+      console.error('Admin verify error:', e);
     }
   }
-  return null;
+
+  return { isAdmin: false, error: 'Access denied' };
+}
+
+// Get all users
+async function getUsers() {
+  if (!turso) return [];
+  try {
+    const result = await turso.execute({ sql: 'SELECT * FROM users ORDER BY created_at DESC', args: [] });
+    return result.rows;
+  } catch (e) {
+    console.error('getUsers error:', e);
+    return [];
+  }
+}
+
+// Get stats
+async function getStats() {
+  if (!turso) return { totalUsers: 0, subscribers: 0, pendingPayouts: 0 };
+  try {
+    const users = await getUsers();
+    const subscribers = users.filter(u => ['starter', 'pro', 'enterprise'].includes(u.plan)).length;
+
+    return {
+      totalUsers: users.length,
+      subscribers,
+      pendingPayouts: 0,
+      monthlyRevenue: 0
+    };
+  } catch (e) {
+    console.error('getStats error:', e);
+    return { totalUsers: 0, subscribers: 0, pendingPayouts: 0 };
+  }
 }
 
 module.exports = {
@@ -31,42 +73,25 @@ module.exports = {
   stats: async (req, res) => {
     try {
       const clerkUserId = req.headers['x-clerk-user-id'];
-      const { isAdmin, error } = verifyAdmin(clerkUserId);
+      const userEmail = req.headers['x-user-email'];
+
+      const { isAdmin, error } = await verifyAdmin(clerkUserId, userEmail);
 
       if (!isAdmin) {
         return res.status(403).json({ error: error || 'Admin access required' });
       }
 
-      let totalUsers = 0;
-      let subscribers = 0;
-      let pendingPayouts = 0;
-      let pendingPayoutCount = 0;
-      let monthlyRevenue = 0;
-
-      for (const [email, user] of usersStore) {
-        totalUsers++;
-        if (user.plan && user.plan !== 'free') {
-          subscribers++;
-        }
-        if (user.pendingPayouts) {
-          for (const payout of user.pendingPayouts) {
-            if (payout.status === 'pending') {
-              pendingPayoutCount++;
-              pendingPayouts += payout.amount;
-            }
-          }
-        }
-      }
+      const stats = await getStats();
 
       res.json({
-        totalUsers,
-        subscribers,
-        pendingPayouts,
-        pendingPayoutCount,
-        monthlyRevenue,
-        newUsersThisWeek: Math.floor(totalUsers * 0.1),
-        newSubsThisWeek: Math.floor(subscribers * 0.15),
-        revenueGrowth: 12
+        totalUsers: stats.totalUsers,
+        subscribers: stats.subscribers,
+        pendingPayouts: stats.pendingPayouts,
+        monthlyRevenue: stats.monthlyRevenue,
+        newUsersThisWeek: 0,
+        newSubsThisWeek: 0,
+        pendingPayoutCount: 0,
+        revenueGrowth: 0
       });
     } catch (error) {
       console.error('Stats error:', error);
@@ -78,170 +103,76 @@ module.exports = {
   users: async (req, res) => {
     try {
       const clerkUserId = req.headers['x-clerk-user-id'];
-      const { isAdmin, error } = verifyAdmin(clerkUserId);
+      const userEmail = req.headers['x-user-email'];
+
+      const { isAdmin, error } = await verifyAdmin(clerkUserId, userEmail);
 
       if (!isAdmin) {
         return res.status(403).json({ error: error || 'Admin access required' });
       }
 
-      const userList = [];
+      const users = await getUsers();
 
-      for (const [email, user] of usersStore) {
-        userList.push({
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          plan: user.plan || 'free',
-          referralCode: user.referralCode,
-          referralEarnings: user.referralEarnings || 0,
-          createdAt: user.createdAt
-        });
-      }
-
-      res.json({ users: userList });
+      res.json({
+        users: users.map(u => ({
+          id: u.id,
+          email: u.email,
+          name: u.name,
+          plan: u.plan,
+          referralCode: u.referral_code,
+          referralEarnings: u.referral_earnings,
+          createdAt: u.created_at
+        }))
+      });
     } catch (error) {
       console.error('Users error:', error);
       res.status(500).json({ error: 'Failed to get users' });
     }
   },
 
-  // Get all payouts
+  // Get payouts (placeholder)
   payouts: async (req, res) => {
     try {
       const clerkUserId = req.headers['x-clerk-user-id'];
-      const { isAdmin, error } = verifyAdmin(clerkUserId);
+      const userEmail = req.headers['x-user-email'];
+
+      const { isAdmin, error } = await verifyAdmin(clerkUserId, userEmail);
 
       if (!isAdmin) {
-        return res.status(403).json({ error: error || 'Admin access required' });
+        return res.status(403).json({ error: 'Admin access required' });
       }
 
-      const payouts = [];
-
-      for (const [email, user] of usersStore) {
-        if (user.pendingPayouts) {
-          for (const payout of user.pendingPayouts) {
-            payouts.push({
-              id: payout.id,
-              referrerId: user.id,
-              referrerName: user.name,
-              refereeId: payout.refereeId,
-              refereeName: payout.refereeName || 'N/A',
-              amount: payout.amount,
-              status: payout.status,
-              createdAt: payout.createdAt
-            });
-          }
-        }
-      }
-
-      res.json({ payouts });
+      res.json({ payouts: [] });
     } catch (error) {
-      console.error('Payouts error:', error);
       res.status(500).json({ error: 'Failed to get payouts' });
     }
   },
 
-  // Get all sessions
+  // Get sessions (placeholder)
   sessions: async (req, res) => {
     try {
       const clerkUserId = req.headers['x-clerk-user-id'];
-      const { isAdmin, error } = verifyAdmin(clerkUserId);
+      const userEmail = req.headers['x-user-email'];
+
+      const { isAdmin, error } = await verifyAdmin(clerkUserId, userEmail);
 
       if (!isAdmin) {
-        return res.status(403).json({ error: error || 'Admin access required' });
+        return res.status(403).json({ error: 'Admin access required' });
       }
 
-      const sessions = [];
-
-      for (const [email, user] of usersStore) {
-        if (user.sessions) {
-          for (const session of user.sessions) {
-            sessions.push({
-              id: session.id,
-              userId: user.id,
-              userName: user.name,
-              platform: session.platform,
-              duration: session.duration,
-              questionsAnswered: session.questionsAnswered,
-              createdAt: session.createdAt
-            });
-          }
-        }
-      }
-
-      sessions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-      res.json({ sessions: sessions.slice(0, 100) });
+      res.json({ sessions: [] });
     } catch (error) {
-      console.error('Sessions error:', error);
       res.status(500).json({ error: 'Failed to get sessions' });
     }
   },
 
-  // Process payout
+  // Process payout (placeholder)
   payout: async (req, res) => {
-    try {
-      const clerkUserId = req.headers['x-clerk-user-id'];
-      const { isAdmin, error } = verifyAdmin(clerkUserId);
-
-      if (!isAdmin) {
-        return res.status(403).json({ error: error || 'Admin access required' });
-      }
-
-      const { payoutId, action } = req.body;
-
-      for (const [email, user] of usersStore) {
-        if (user.pendingPayouts) {
-          const payoutIndex = user.pendingPayouts.findIndex(p => p.id === payoutId);
-          if (payoutIndex !== -1) {
-            const payout = user.pendingPayouts[payoutIndex];
-
-            if (action === 'approve') {
-              payout.status = 'paid';
-              user.referralEarnings = (user.referralEarnings || 0) + payout.amount;
-              res.json({ success: true, message: 'Payout approved', payout });
-            } else if (action === 'reject') {
-              payout.status = 'rejected';
-              res.json({ success: true, message: 'Payout rejected', payout });
-            } else {
-              res.status(400).json({ error: 'Invalid action' });
-            }
-            return;
-          }
-        }
-      }
-
-      res.status(404).json({ error: 'Payout not found' });
-    } catch (error) {
-      console.error('Payout action error:', error);
-      res.status(500).json({ error: 'Failed to process payout' });
-    }
+    res.status(500).json({ error: 'Payouts not yet implemented' });
   },
 
-  // Update user plan
+  // Update user plan (placeholder)
   updateUserPlan: async (req, res) => {
-    try {
-      const clerkUserId = req.headers['x-clerk-user-id'];
-      const { isAdmin, error } = verifyAdmin(clerkUserId);
-
-      if (!isAdmin) {
-        return res.status(403).json({ error: error || 'Admin access required' });
-      }
-
-      const { userId, plan } = req.body;
-
-      for (const [email, user] of usersStore) {
-        if (user.id === userId) {
-          user.plan = plan;
-          res.json({ success: true, user: { id: user.id, plan: user.plan } });
-          return;
-        }
-      }
-
-      res.status(404).json({ error: 'User not found' });
-    } catch (error) {
-      console.error('Update plan error:', error);
-      res.status(500).json({ error: 'Failed to update user plan' });
-    }
+    res.status(500).json({ error: 'Plan updates not yet implemented' });
   }
 };

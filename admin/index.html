@@ -548,12 +548,14 @@
     // Fetch with auth
     async function apiFetch(endpoint, options = {}) {
       const user = Clerk.user;
+      const userEmail = user.emailAddresses[0]?.emailAddress || user.primaryEmailAddress?.emailAddress;
 
       const response = await fetch(`${API_URL}${endpoint}`, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
           'x-clerk-user-id': user.id,
+          'x-user-email': userEmail,
           ...options.headers
         }
       });

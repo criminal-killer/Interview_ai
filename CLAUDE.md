@@ -119,3 +119,10 @@ Auto-detected: Zoom, Google Meet, Microsoft Teams, LeetCode, HackerRank, Codilit
 - First 5 referrals: $5 cash credit each (admin manual payout via Paystack)
 - After 5 referrals: 20% discount on next billing
 - Referee gets $5 credit on first paid subscription
+
+## Important Rules
+
+- **NEVER push .env or any file containing secrets/API keys to GitHub** - Use .gitignore
+- **Always ask** when not sure or don't understand something - don't assume
+- Ask before executing destructive commands (git push --force, deleting files, etc.)
+- Ask before pushing code if not certain about the changes

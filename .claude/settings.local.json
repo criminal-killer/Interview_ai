@@ -27,7 +27,15 @@
       "Bash(powershell -Command \"\\(Get-Content content/content.js\\) -replace 'InterviewAce', 'Blinkora' | Set-Content content/content.js\")",
       "Bash(powershell -Command \"\\(Get-Content lib/storage/chrome-storage.js\\) -replace 'InterviewAce', 'Blinkora' | Set-Content lib/storage/chrome-storage.js\")",
       "Bash(powershell -Command \"\\(Get-Content lib/ai/openrouter.js\\) -replace 'InterviewAce', 'Blinkora' | Set-Content lib/ai/openrouter.js\")",
-      "Bash(powershell -Command \"\\(Get-Content content/content.css\\) -replace 'InterviewAce', 'Blinkora' | Set-Content content/content.css\")"
+      "Bash(powershell -Command \"\\(Get-Content content/content.css\\) -replace 'InterviewAce', 'Blinkora' | Set-Content content/content.css\")",
+      "Bash(git reset *)",
+      "Bash(npm install *)",
+      "Bash(node setup-db.js)",
+      "Bash(npx turso *)",
+      "Bash(npx --yes @libsql/client@latest -e \"SELECT 1\" --url \"libsql://interviewace-db.turso.io\" --auth-token \"eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3Nzg2NzczODAsImlkIjoiMDE5ZTFiNjAtMmYwMS03MzY3LTk1N2EtMGU5YjgzMjYyMTI0IiwicmlkIjoiZjJjMTY4MzEtNzJlNC00MDAzLWE1NjktM2Q1ZDFkNzIzNDcxIn0.IgqUenWZn_OXykbF5j9Zu5-BLhUYWuvXdICX2SrNcBcJ8jYH8fNYYcy3v7rRhnB_Sn1R5mtzotBTsdcsaPOPCw\")",
+      "Bash(node -e \"const {createClient} = require\\('@libsql/client'\\); const client = createClient\\({url: 'libsql://interviewace-db.turso.io', authToken: 'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3Nzg2NzczODAsImlkIjoiMDE5ZTFiNjAtMmYwMS03MzY3LTk1N2EtMGU5YjgzMjYyMTI0IiwicmlkIjoiZjJjMTY4MzEtNzJlNC00MDAzLWE1NjktM2Q1ZDFkNzIzNDcxIn0.IgqUenWZn_OXykbF5j9Zu5-BLhUYWuvXdICX2SrNcBcJ8jYH8fNYYcy3v7rRhnB_Sn1R5mtzotBTsdcsaPOPCw'}\\); client.execute\\({sql:'SELECT 1', args:[]}\\).then\\(r=>console.log\\('Connected:', r\\)\\).catch\\(e=>console.error\\('Error:', e.message\\)\\)\")",
+      "Bash(node -e \"const {createClient} = require\\('@libsql/client'\\); const client = createClient\\({url: 'https://interviewace-db.turso.io', authToken: 'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3Nzg2NzczODAsImlkIjoiMDE5ZTFiNjAtMmYwMS03MzY3LTk1N2EtMGU5YjgzMjYyMTI0IiwicmlkIjoiZjJjMTY4MzEtNzJlNC00MDAzLWE1NjktM2Q1ZDFkNzIzNDcxIn0.IgqUenWZn_OXykbF5j9Zu5-BLhUYWuvXdICX2SrNcBcJ8jYH8fNYYcy3v7rRhnB_Sn1R5mtzotBTsdcsaPOPCw'}\\); client.execute\\({sql:'SELECT 1', args:[]}\\).then\\(r=>console.log\\('Connected'\\)\\).catch\\(e=>console.error\\('Error:', e.message\\)\\)\")",
+      "Bash(node -e \"const {createClient} = require\\('@libsql/client'\\); const client = createClient\\({url: 'libsql://interview-criminal.aws-ap-northeast-1.turso.io', authToken: 'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3Nzg2NzczODAsImlkIjoiMDE5ZTFiNjAtMmYwMS03MzY3LTk1N2EtMGU5YjgzMjYyMTI0IiwicmlkIjoiZjJjMTY4MzEtNzJlNC00MDAzLWE1NjktM2Q1ZDFkNzIzNDcxIn0.IgqUenWZn_OXykbF5j9Zu5-BLhUYWuvXdICX2SrNcBcJ8jYH8fNYYcy3v7rRhnB_Sn1R5mtzotBTsdcsaPOPCw'}\\); client.execute\\({sql:'SELECT 1', args:[]}\\).then\\(r=>console.log\\('Connected'\\)\\).catch\\(e=>console.error\\('Error:', e.message\\)\\)\")"
     ]
   }
 }
